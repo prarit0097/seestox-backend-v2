@@ -1,0 +1,120 @@
+{
+  "JSLL": [
+    {
+      "timestamp": "2025-12-24T08:50:55.500570",
+      "price": 713.0,
+      "trend": "DOWNTREND",
+      "sentiment": "POSITIVE_WEAK",
+      "prediction": {
+        "up_probability": 25,
+        "down_probability": 45,
+        "low": 691.61,
+        "high": 734.39
+      },
+      "evaluated": false,
+      "outcome": null
+    },
+    {
+      "timestamp": "2025-12-24T08:54:39.188902",
+      "price": 713.0,
+      "trend": "DOWNTREND",
+      "sentiment": "POSITIVE_WEAK",
+      "prediction": {
+        "up_probability": 25,
+        "down_probability": 45,
+        "low": 691.61,
+        "high": 734.39
+      },
+      "evaluated": false,
+      "outcome": null
+    },
+    {
+      "timestamp": "2025-12-24T08:58:58.946690",
+      "price": 711.6500244140625,
+      "trend": "DOWNTREND",
+      "sentiment": "POSITIVE_WEAK",
+      "prediction": {
+        "up_probability": 25,
+        "down_probability": 45,
+        "low": 690.3,
+        "high": 733.0
+      },
+      "evaluated": false,
+      "outcome": null
+    },
+    {
+      "timestamp": "2025-12-24T09:02:50.003355",
+      "price": 711.5999755859375,
+      "trend": "DOWNTREND",
+      "sentiment": "POSITIVE_WEAK",
+      "prediction": {
+        "up_probability": 25,
+        "down_probability": 45,
+        "low": 690.25,
+        "high": 732.95
+      },
+      "evaluated": false,
+      "outcome": null
+    },
+    {
+      "timestamp": "2025-12-24T09:08:46.982404",
+      "price": 711.5999755859375,
+      "trend": "DOWNTREND",
+      "sentiment": "POSITIVE_WEAK",
+      "prediction": {
+        "up_probability": 25,
+        "down_probability": 45,
+        "low": 690.25,
+        "high": 732.95
+      },
+      "evaluated": false,
+      "outcome": null
+    },
+    {
+      "timestamp": "2025-12-24T09:09:14.386976",
+      "price": 711.0,
+      "trend": "DOWNTREND",
+      "sentiment": "POSITIVE_WEAK",
+      "prediction": {
+        "up_probability": 25,
+        "down_probability": 45,
+        "low": 689.67,
+        "high": 732.33
+      },
+      "evaluated": false,
+      "outcome": null
+    }
+  ],
+  "JSL": [
+    {
+      "timestamp": "2025-12-24T08:59:09.355056",
+      "price": 797.75,
+      "trend": "UPTREND",
+      "sentiment": "POSITIVE",
+      "prediction": {
+        "up_probability": 45,
+        "down_probability": 25,
+        "low": 782.02,
+        "high": 813.48
+      },
+      "evaluated": false,
+      "outcome": null
+    }
+  ],
+  "jsll": [
+    {
+      "timestamp": "2025-12-24T09:08:10.623245",
+      "price": 711.5999755859375,
+      "trend": "DOWNTREND",
+      "sentiment": "POSITIVE_WEAK",
+      "prediction": {
+        "up_probability": 25,
+        "down_probability": 45,
+        "low": 690.25,
+        "high": 732.95
+      },
+      "evaluated": false,
+      "outcome": null
+    }
+  ]
+}

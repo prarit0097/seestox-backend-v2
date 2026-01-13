@@ -1,0 +1,77 @@
+.privacy-page {
+    max-width: 1100px;
+    margin: auto;
+    padding: 32px;
+}
+
+/* HEADER */
+.privacy-header {
+    max-width: 760px;
+    margin-bottom: 40px;
+}
+
+.privacy-header h1 {
+    font-size: 36px;
+    font-weight: 800;
+    margin-bottom: 12px;
+}
+
+.privacy-header p {
+    color: #9bb3c7;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+/* CARD */
+.privacy-card {
+    background: rgba(15, 23, 42, 0.65);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255,255,255,0.04);
+}
+
+.privacy-card h2 {
+    font-size: 20px;
+    margin-bottom: 12px;
+}
+
+.privacy-card p {
+    color: #a8bfd1;
+    font-size: 15px;
+    line-height: 1.7;
+    margin-bottom: 8px;
+}
+
+.privacy-card ul {
+    padding-left: 18px;
+    margin-top: 10px;
+}
+
+.privacy-card ul li {
+    color: #a8bfd1;
+    margin-bottom: 6px;
+    font-size: 15px;
+}
+
+/* CONTACT */
+.contact-card {
+    background: rgba(0, 170, 255, 0.08);
+    border: 1px solid rgba(0, 170, 255, 0.25);
+}
+
+.contact-email {
+    font-weight: 600;
+    color: #4fc3ff;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+    .privacy-page {
+        padding: 20px;
+    }
+
+    .privacy-header h1 {
+        font-size: 28px;
+    }
+}

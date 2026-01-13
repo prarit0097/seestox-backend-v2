@@ -1,0 +1,68 @@
+{% extends "layout/base.html" %}
+{% load static %}
+
+{% block title %}Stock Chat – AIStockTool{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{% static 'css/stock_chat/stock_chat.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="stockchat-wrapper">
+
+    <!-- TOP SEARCH AREA -->
+    <div id="chat-search-area" class="search-area center">
+       
+
+        <h1 class="heading">Ask anything about the stock market</h1>
+
+        <div class="search-pill">
+            <input id="chat-input" type="text" placeholder="Ask AI about stocks, trends or strategy…" />
+            <button id="send-btn">➤</button>
+        </div>
+
+        <div class="chips">
+            <span class="chip">Is TCS bullish tomorrow?</span>
+            <span class="chip">JSLL stock ka kya kre</span>
+            <span class="chip">Risk in WIPRO stocks</span>
+        </div>
+
+    </div>
+
+    <!-- CHAT AREA -->
+    <div id="chat-area" class="chat-area hidden">
+        <div class="messages" id="messages"></div>
+    </div>
+
+</div>
+
+<form id="csrf-form" class="hidden">
+    {% csrf_token %}
+</form>
+
+{% endblock %}
+
+{% block js %}
+<script src="{% static 'js/stock_chat/stock_chat.js' %}"></script>
+
+<!-- ✅ AUTO SCROLL (MANDATORY FIX ONLY) -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const chatArea = document.getElementById("chat-area");
+    const messages = document.getElementById("messages");
+
+    if (!chatArea || !messages) return;
+
+    const observer = new MutationObserver(() => {
+        chatArea.scrollTop = chatArea.scrollHeight;
+    });
+
+    observer.observe(messages, {
+        childList: true,
+        subtree: true
+    });
+});
+</script>
+
+{% endblock %}

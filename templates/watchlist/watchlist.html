@@ -1,0 +1,37 @@
+{% extends "layout/base.html" %}
+{% load static %}
+
+{% block title %}Watchlist | AIStockTool{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{% static 'css/watchlist/watchlist.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="watchlist-container">
+
+    <!-- 🔼 ADD BAR FIRST -->
+    <div class="watchlist-add-bar">
+        <input id="watchlist-search-input" placeholder="Search stock to add..." />
+        <div id="watchlist-search-suggestions" class="hidden"></div>
+        <button id="watchlist-add-btn">+ Add</button>
+    </div>
+
+    <!-- 🔽 WATCHLIST CARDS BELOW -->
+    <div class="watchlist-grid">
+        {% for symbol in symbols %}
+        <div class="watchlist-card" data-symbol="{{ symbol }}">
+            <button class="remove-btn">✕</button>
+            <div class="symbol">{{ symbol }}</div>
+            <div class="price" id="price-{{ symbol }}">₹—</div>
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+
+<script src="{% static 'js/layout/global_market_status.js' %}"></script>
+<script src="{% static 'js/watchlist/watchlist.js' %}"></script>
+
+{% endblock %}

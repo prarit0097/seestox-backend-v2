@@ -1,0 +1,98 @@
+{% extends "layout/base.html" %}
+{% load static %}
+
+{% block title %}Stock Detail – AIStockTool{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{% static 'css/stock_detail_page/stock_detail_page.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<!-- ================= STOCK HEADER ================= -->
+<section class="stock-header">
+    <div>
+        <h1 id="stock-name">—</h1>
+        <p id="stock-meta">—</p>
+    </div>
+
+    <div class="price">
+        <h2 id="stock-price">₹—</h2>
+        <span id="ai-verdict">WAIT</span>
+    </div>
+</section>
+
+<!-- ================= AI PREDICTION ================= -->
+<section class="card">
+    <h3>AI Prediction (Tomorrow)</h3>
+
+    <p>Bearish <span id="bearish">45%</span></p>
+    <div class="bar">
+        <div class="bar-fill red" id="bearish-bar"></div>
+    </div>
+
+    <p>Sideways <span id="sideways">30%</span></p>
+    <div class="bar">
+        <div class="bar-fill gray" id="sideways-bar"></div>
+    </div>
+
+    <p>Bullish <span id="bullish">25%</span></p>
+    <div class="bar">
+        <div class="bar-fill green" id="bullish-bar"></div>
+    </div>
+
+    <p id="expected-range"></p>
+</section>
+
+<!-- ================= GRID ================= -->
+<div class="grid">
+
+    <!-- RISK -->
+    <section class="card risk-card">
+        <h3>Risk Profile</h3>
+
+        <div class="risk-badge" id="risk-level">
+            MEDIUM
+        </div>
+
+        <div class="risk-score-box">
+            Risk Score
+            <span id="risk-score">50</span>
+        </div>
+    </section>
+
+    <!-- TREND -->
+    <section class="card">
+        <h3>Trend Analysis</h3>
+        <p>Trend: <span id="trend"></span></p>
+        <p>Strength: <span id="strength"></span></p>
+        <p>Volume: <span id="volume"></span></p>
+        <p>Support: ₹<span id="support"></span></p>
+        <p>Resistance: ₹<span id="resistance"></span></p>
+    </section>
+
+</div>
+
+<!-- ================= SENTIMENT ================= -->
+<section class="card">
+    <h3>Market Sentiment</h3>
+    <p id="sentiment-overall"></p>
+    <p>Confidence: <span id="sentiment-confidence"></span></p>
+    <ul id="sentiment-news"></ul>
+</section>
+
+<!-- ================= CONFIDENCE ================= -->
+<section class="card">
+    <h3>Historical Confidence</h3>
+    <p>Success: <span id="conf-success"></span></p>
+    <p>Failure: <span id="conf-failure"></span></p>
+    <p>Neutral: <span id="conf-neutral"></span></p>
+    <p>Samples: <span id="conf-samples"></span></p>
+    <p>Verdict: <span id="conf-verdict"></span></p>
+</section>
+
+{% endblock %}
+
+{% block js %}
+<script src="{% static 'js/stock_detail_page/stock_detail_page.js' %}"></script>
+{% endblock %}

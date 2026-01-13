@@ -1,0 +1,138 @@
+/* ===========================
+   STOCK SEARCH PAGE ONLY
+   =========================== */
+
+.stock-search-page {
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+/* HERO */
+.search-hero {
+    text-align: center;
+    margin: 40px 0 30px;
+}
+
+.search-hero h1 {
+    font-size: 36px;
+    font-weight: 800;
+}
+
+.search-hero p {
+    color: #9ca3af;
+    margin-top: 10px;
+}
+
+/* SEARCH BOX (RENAMED to avoid clash) */
+.stock-search-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #16252e;
+    border: 1px solid #223946;
+    border-radius: 16px;
+    padding: 14px 16px;
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.stock-search-box input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #ffffff;
+    font-size: 16px;
+}
+
+#analyze-btn {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* Analyze button hover */
+#analyze-btn {
+    transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s;
+}
+
+#analyze-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45);
+    opacity: 0.95;
+    cursor: pointer;
+}
+
+
+/* ===== SUGGESTION BOX UI ===== */
+.suggestions {
+    max-width: 700px;
+    margin: 10px auto;
+    background: rgba(15, 23, 42, 0.98);
+    border: 1px solid #334155;
+    border-radius: 14px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+    overflow: hidden;
+    backdrop-filter: blur(6px);
+}
+
+/* Individual suggestion item */
+.suggestions div {
+    padding: 12px 16px;
+    font-size: 14px;
+    color: #e5e7eb;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+    border-bottom: 1px solid rgba(51,65,85,0.6);
+}
+
+.suggestions div:last-child {
+    border-bottom: none;
+}
+
+/* Hover effect on suggestions */
+.suggestions div:hover {
+    background: rgba(37, 99, 235, 0.18);
+    color: #ffffff;
+    cursor: pointer;
+}
+
+
+.hidden {
+    display: none;
+}
+
+
+.chips button {
+    background: #16252e;
+    border: 1px solid #223946;
+    border-radius: 20px;
+    padding: 8px 14px;
+    margin: 4px;
+    color: white;
+    cursor: pointer;
+}
+
+.bar {
+    height: 4px;
+    background: #374151;
+    border-radius: 4px;
+    margin-top: 8px;
+}
+
+.bar.green { background: #4ade80; width: 70%; }
+.bar.red { background: #f87171; width: 30%; }
+.bar.full { width: 100%; }
+
+/* Cursor fix for search box */
+.stock-search-box {
+    cursor: text;
+}
+
+.stock-search-box input {
+    cursor: text;
+}

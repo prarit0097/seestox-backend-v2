@@ -1,0 +1,19 @@
+# venv / python
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# env/secrets
+.env
+.env.*
+*.pem
+*.key
+
+# django
+staticfiles/
+media/
+*.log
+
+# misc
+replacements.txt

@@ -1,0 +1,158 @@
+{% extends "layout/base.html" %}
+{% load static %}
+
+{% block title %}Pricing & Plans | AIStockTool{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{% static 'css/subscription/subscription.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="pricing-page">
+
+    <!-- ===== HERO ===== -->
+    <div class="pricing-hero">
+        <h1>
+            Simple Pricing for <span>Serious Traders</span>
+        </h1>
+        <p>
+            One powerful AI platform. Same features across all plans.
+            Start free, upgrade anytime.
+        </p>
+    </div>
+
+    <!-- ===== PLANS ===== -->
+    <div class="plans-grid">
+
+        <!-- ===== TRIAL (NO CHANGE) ===== -->
+        <div class="plan-card trial-card">
+
+            {% if subscription_status == "TRIAL_ACTIVE" %}
+                <h3>🎉 Trial Started</h3>
+                <p class="desc">You are currently enjoying your free trial.</p>
+
+                <div class="trial-period">
+                    Trial Period:
+                    <strong>
+                        {{ trial_start|date:"d M Y" }} – {{ trial_end|date:"d M Y" }}
+                    </strong>
+                </div>
+
+                <button class="btn outline" disabled>Trial Active</button>
+
+            {% elif subscription_status == "TRIAL_EXPIRED" %}
+                <h3>Trial Ended</h3>
+                <p class="desc">Your free trial has expired.</p>
+                <button class="btn outline" disabled>Trial Expired</button>
+
+            {% else %}
+                <h3>Starter Trial</h3>
+                <p class="desc">Explore full AIStockTool experience.</p>
+
+                <div class="price">
+                    <strong>₹0</strong>
+                    <span>/ 7 days</span>
+                </div>
+
+                <button class="btn outline" disabled>Trial Activated</button>
+            {% endif %}
+
+            <ul>
+                <li class="ok">Full AI Stock Predictions</li>
+                <li class="ok">Unlimited Market News</li>
+                <li class="ok">AI Chat Assistant</li>
+                <li class="ok">Historical Accuracy Data</li>
+                <li class="ok">Exports (CSV / Excel)</li>
+            </ul>
+        </div>
+
+        <!-- ===== MONTHLY ===== -->
+        <div class="plan-card">
+
+            <h3>Pro Monthly</h3>
+            <p class="desc">Best for active daily traders.</p>
+
+            <div class="price">
+                <strong>₹299</strong>
+                <span>/ month</span>
+            </div>
+
+            {% if subscription.is_active and subscription.plan == "MONTHLY" %}
+                <div class="plan-period">
+                    {{ subscription.paid_start|date:"d M Y" }} – {{ subscription.paid_end|date:"d M Y" }}
+                </div>
+                <button class="btn dark disabled" disabled>
+                    Plan Active
+                </button>
+
+            {% elif subscription.is_active and subscription.plan == "YEARLY" %}
+                <button class="btn dark disabled" disabled>
+                    Included in Yearly
+                </button>
+
+            {% else %}
+                <button class="btn dark" onclick="startPayment('MONTHLY')">
+                    Upgrade Monthly
+                </button>
+            {% endif %}
+
+            <ul>
+                <li class="ok">Everything in Trial</li>
+                <li class="ok">Unlimited Daily Signals</li>
+                <li class="ok">Priority AI Processing</li>
+                <li class="ok">Email Support</li>
+            </ul>
+        </div>
+
+        <!-- ===== YEARLY ===== -->
+        <div class="plan-card featured">
+
+            <span class="badge">BEST VALUE</span>
+
+            <h3>Pro Yearly</h3>
+            <p class="desc">Save more with long-term access.</p>
+
+            <div class="price">
+                <strong>₹3000</strong>
+                <span>/ year</span>
+            </div>
+
+            <div class="billing-note">
+                Save ₹588 compared to monthly
+            </div>
+
+            {% if subscription.is_active and subscription.plan == "YEARLY" %}
+                <div class="plan-period">
+                    {{ subscription.paid_start|date:"d M Y" }} – {{ subscription.paid_end|date:"d M Y" }}
+                </div>
+                <button class="btn primary disabled" disabled>
+                    Plan Active
+                </button>
+
+            {% else %}
+                <button class="btn primary" onclick="startPayment('YEARLY')">
+                    Upgrade Yearly
+                </button>
+            {% endif %}
+
+            <ul>
+                <li class="ok">Everything in Pro Monthly</li>
+                <li class="ok">Early Access to New Features</li>
+                <li class="ok">VIP Priority Support</li>
+                <li class="ok">Future AI Modules Included</li>
+            </ul>
+        </div>
+
+    </div>
+
+    <div class="pricing-trust">
+        <p>Trusted by serious traders. Cancel anytime. No hidden charges.</p>
+    </div>
+
+</div>
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script src="{% static 'js/razorpay_subscription/payment.js' %}?v=2"></script>
+
+{% endblock %}

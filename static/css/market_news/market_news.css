@@ -1,0 +1,179 @@
+/* =========================================================
+   MARKET NEWS – CLEAN PREMIUM UI
+   ========================================================= */
+
+/* ---------- PAGE HEADER ---------- */
+.news-header {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 28px;
+}
+
+.news-header h1 {
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+}
+
+.news-header p {
+    font-size: 14px;
+    color: #94a3b8;
+    max-width: 620px;
+}
+
+/* ---------- LAYOUT (FULL WIDTH) ---------- */
+.news-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+}
+
+/* ---------- FEED HEADER ---------- */
+.feed-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+}
+
+.feed-header h3 {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+}
+
+/* ---------- PREMIUM REFRESH BUTTON ---------- */
+.news-refresh {
+    position: relative;
+    padding: 11px 26px;
+    border-radius: 999px;
+
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+
+    background: linear-gradient(
+        135deg,
+        #38bdf8 0%,
+        #0ea5e9 100%
+    );
+
+    color: #020617;
+    border: none;
+    cursor: pointer;
+
+    box-shadow:
+        0 10px 24px rgba(56,189,248,0.35),
+        inset 0 0 0 1px rgba(255,255,255,0.25);
+
+    transition: all 0.25s ease;
+}
+
+.news-refresh:hover {
+    transform: translateY(-2px);
+    box-shadow:
+        0 16px 40px rgba(56,189,248,0.45),
+        inset 0 0 0 1px rgba(255,255,255,0.35);
+}
+
+.news-refresh:active {
+    transform: scale(0.96);
+}
+
+/* Soft glow */
+.news-refresh::after {
+    content: "";
+    position: absolute;
+    inset: -5px;
+    border-radius: inherit;
+    background: radial-gradient(
+        circle,
+        rgba(56,189,248,0.35),
+        transparent 70%
+    );
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.news-refresh:hover::after {
+    opacity: 1;
+}
+
+/* ---------- NEWS CARDS ---------- */
+.news-card {
+    position: relative;
+    padding: 26px 28px;
+    margin-bottom: 22px;
+
+    border-radius: 18px;
+    background: linear-gradient(
+        180deg,
+        rgba(15,23,42,0.72),
+        rgba(2,6,23,0.85)
+    );
+
+    box-shadow:
+        0 8px 30px rgba(0,0,0,0.35),
+        inset 0 0 0 1px rgba(148,163,184,0.06);
+
+    transition: all 0.25s ease;
+}
+
+.news-card:hover {
+    transform: translateY(-4px);
+    box-shadow:
+        0 16px 45px rgba(0,0,0,0.45),
+        inset 0 0 0 1px rgba(56,189,248,0.25);
+}
+
+/* ---------- TITLE ---------- */
+.news-card h2 {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.5;
+    margin-bottom: 10px;
+}
+
+/* ---------- META ---------- */
+.news-card .meta {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+/* ---------- SENTIMENT TAG ---------- */
+.tag {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+
+    font-size: 11px;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 999px;
+    letter-spacing: 0.4px;
+
+    background: rgba(148,163,184,0.15);
+    color: #cbd5f5;
+}
+
+.tag.neutral {
+    background: rgba(148,163,184,0.15);
+}
+
+.tag.bullish {
+    background: rgba(34,197,94,0.15);
+    color: #22c55e;
+}
+
+.tag.bearish {
+    background: rgba(239,68,68,0.15);
+    color: #ef4444;
+}
+
+/* ---------- REMOVE UNUSED UI ---------- */
+.news-filters,
+.news-search,
+.side-card {
+    display: none !important;
+}

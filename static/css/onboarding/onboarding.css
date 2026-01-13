@@ -1,0 +1,136 @@
+/* ===========================
+   RESET & BASE
+=========================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+}
+
+body {
+    min-height: 100vh;
+    background: radial-gradient(circle at top, #0f172a, #020617);
+    color: #e5e7eb;
+}
+
+
+
+/* ===========================
+   WRAPPER
+=========================== */
+.onboarding-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+}
+
+/* ===========================
+   CARD
+=========================== */
+.onboarding-card {
+    width: 100%;
+    max-width: 520px;
+    background: linear-gradient(180deg, #0e1f2a, #09151d);
+    border-radius: 18px;
+    padding: 48px 42px;
+    box-shadow:
+        0 25px 80px rgba(0, 200, 255, 0.18),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+    text-align: center;
+}
+
+/* ===========================
+   TEXT
+=========================== */
+.onboarding-card h1 {
+    font-size: 32px;
+    font-weight: 800;
+    margin-bottom: 12px;
+}
+
+.onboarding-card h1 span {
+    color: #00c8ff;
+}
+
+.subtitle {
+    color: #b9d4df;
+    font-size: 15px;
+    line-height: 1.6;
+    margin-bottom: 28px;
+}
+
+/* ===========================
+   FEATURES
+=========================== */
+.features {
+    list-style: none;
+    text-align: left;
+    margin-bottom: 32px;
+}
+
+.features li {
+    position: relative;
+    padding-left: 26px;
+    margin-bottom: 14px;
+    font-size: 14.5px;
+    color: #e2f1f7;
+}
+
+.features li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    top: 0;
+    color: #00c8ff;
+    font-weight: 700;
+}
+
+/* ===========================
+   CTA BUTTON
+=========================== */
+.cta-btn {
+    width: 100%;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 700;
+    border-radius: 50px;
+    border: none;
+    cursor: pointer;
+
+    background: linear-gradient(90deg, #00c8ff, #009cff);
+    color: #001018;
+
+    transition: all 0.3s ease;
+    box-shadow: 0 10px 30px rgba(0, 200, 255, 0.35);
+}
+
+.cta-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 45px rgba(0, 200, 255, 0.55);
+}
+
+/* ===========================
+   FOOT NOTE
+=========================== */
+.note {
+    margin-top: 18px;
+    font-size: 12.5px;
+    color: #8fb4c5;
+    opacity: 0.85;
+}
+
+/* ===========================
+   RESPONSIVE
+=========================== */
+@media (max-width: 480px) {
+    .onboarding-card {
+        padding: 36px 26px;
+    }
+
+    .onboarding-card h1 {
+        font-size: 26px;
+    }
+}

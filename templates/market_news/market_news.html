@@ -1,0 +1,80 @@
+{% extends "layout/base.html" %}
+{% load static %}
+
+{% block title %}Market News – AIStockTool{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{% static 'css/market_news/market_news.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="news-header">
+    <div>
+        <h1>Market News</h1>
+        <p>Real-time AI-curated insights & sentiment analysis.</p>
+    </div>
+
+    <div class="news-search">
+        <input type="text" placeholder="Search stock news (e.g. JSLL, TCS, Reliance)">
+        <span class="filter-icon">⚙</span>
+    </div>
+</div>
+
+<div class="news-filters">
+    <button class="active">All News</button>
+    <button>Trending</button>
+    <button class="bullish">Bullish</button>
+    <button class="bearish">Bearish</button>
+    <button>Neutral</button>
+
+    <div class="live-indicator">
+        <span></span> Live Feed
+    </div>
+</div>
+
+<div class="news-layout">
+
+    <!-- ================= LEFT FEED ================= -->
+    <div class="news-feed-wrapper">
+
+        <!-- 🔥 THIS WAS MISSING -->
+        <div class="feed-header">
+            <h3>Latest Updates</h3>
+
+            <!-- ✅ REFRESH BUTTON -->
+            <a href="#" class="news-refresh">Refresh</a>
+        </div>
+
+        <div class="news-feed">
+            <!-- JS injects news here -->
+        </div>
+    </div>
+
+    <!-- ================= RIGHT SIDE ================= -->
+    <aside class="side-card">
+        <h3>Market Sentiment</h3>
+
+        <div class="sentiment-bar">
+            <div class="bull"></div>
+            <div class="neutral"></div>
+            <div class="bear"></div>
+        </div>
+
+        <div class="sentiment-labels">
+            <span class="bull">0% Bullish</span>
+            <span class="bear">0% Bearish</span>
+        </div>
+
+        <p style="margin-top:12px;color:#94a3b8;font-size:13px;">
+            Overall sentiment is leaning bullish driven by strong IT & Pharma earnings.
+        </p>
+    </aside>
+
+</div>
+
+{% endblock %}
+
+{% block js %}
+<script src="{% static 'js/market_news/market_news.js' %}"></script>
+{% endblock %}

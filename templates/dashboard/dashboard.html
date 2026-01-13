@@ -1,0 +1,105 @@
+{% extends "layout/base.html" %}
+{% load static %}
+
+{% block title %}Dashboard – AIStockTool{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{% static 'css/dashboard/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<!-- SEARCH -->
+<div class="search-box">
+    <input id="stock-input" placeholder="Search NSE / BSE stock or company" autocomplete="off">
+
+    <!-- ✅ suggestion box (same place, no UI change) -->
+    <div id="suggestion-box"></div>
+
+    <button id="analyze-btn" type="button">Analyze</button>
+</div>
+
+<!-- MARKET SNAPSHOT -->
+<section class="market-overview">
+    <div class="market-card positive">
+        <h4>NIFTY 50</h4>
+        <p>Market Strength</p>
+        <!-- ✅ ID ADDED (nothing else changed) -->
+        <span id="nifty-value">+0.62%</span>
+    </div>
+
+    <div class="market-card positive">
+        <h4>SENSEX</h4>
+        <p>Momentum</p>
+        <!-- ✅ ID ADDED -->
+        <span id="sensex-value">+0.48%</span>
+    </div>
+
+    <div class="market-card negative">
+        <h4>VIX</h4>
+        <p>Volatility</p>
+        <!-- ✅ ID ADDED -->
+        <span id="vix-value">-2.10%</span>
+    </div>
+</section>
+
+<!-- AI SIGNAL -->
+<section class="ai-signal">
+    <h2>AI Decision Highlight</h2>
+
+    <div class="signal-card">
+        <div class="signal-left">
+            <h3 id="signal-symbol">—</h3>
+            <span id="signal-action" class="badge neutral">WAIT</span>
+            <p id="signal-summary">
+                Search a stock and click Analyze to get AI signal.
+            </p>
+        </div>
+
+        <div class="signal-right">
+            <span>AI Confidence</span>
+            <strong id="signal-confidence">—%</strong>
+        </div>
+    </div>
+</section>
+
+<!-- WHY / RISK -->
+<section class="explanation">
+    <div class="explain-box">
+        <h4>Why this signal?</h4>
+        <p id="why-text">—</p>
+    </div>
+
+    <div class="risk-box">
+        <h4>Worst Case Scenario</h4>
+        <p id="risk-text">—</p>
+    </div>
+</section>
+
+<!-- HISTORY -->
+<section class="history">
+    <h2>Prediction Transparency</h2>
+
+    <div class="transparency-box">
+        <p id="pt-correct">Correct Predictions: —%</p>
+        <p id="pt-wrong">Wrong Predictions: —%</p>
+        <p id="pt-neutral">Neutral Outcomes: —%</p>
+
+        <hr>
+
+        <p id="pt-samples">Data Samples: —</p>
+        <p id="pt-verdict">AI Reliability: —</p>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block js %}
+<script src="{% static 'js/search.js' %}"></script>
+<script src="{% static 'js/dashboard/analyze.js' %}"></script>
+<script src="{% static 'js/recent.js' %}"></script>
+
+
+<!-- ✅ REAL-TIME DASHBOARD SYNC -->
+<script src="{% static 'js/dashboard/dashboard.js' %}"></script>
+{% endblock %}

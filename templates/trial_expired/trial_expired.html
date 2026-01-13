@@ -1,0 +1,87 @@
+{% extends "layout/base.html" %}
+{% load static %}
+
+{% block title %}Trial Expired – AIStockTool{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{% static 'css/trial_expired/trial_expired.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="trial-expired-container">
+
+    <div class="trial-card">
+
+        <!-- LEFT PANEL -->
+        <div class="trial-left">
+
+            <div class="icon-lock">🔒</div>
+
+            <h1>Your 7-day free trial has ended</h1>
+
+            <p class="desc">
+                You’ve reached your trial limit. Upgrade now to regain full access to
+                AI predictions, portfolio insights, and real-time alerts.
+            </p>
+
+            <div class="locked-preview">
+                <span class="tag">LOCKED</span>
+                <div class="chart-placeholder"></div>
+                <p>Portfolio Analysis & Projections</p>
+            </div>
+
+            <p class="data-note">
+                🔐 Your data is safe and waiting for you.
+            </p>
+
+        </div>
+
+        <!-- RIGHT PANEL -->
+        <div class="trial-right">
+
+            <h2>Unlock Professional Features</h2>
+
+            <ul class="feature-list">
+                <li>
+                    <strong>Unlimited AI stock predictions</strong>
+                    <span>Daily forecasts for 5000+ stocks</span>
+                </li>
+                <li>
+                    <strong>Real-time market sentiment</strong>
+                    <span>Instant alerts on news & trends</span>
+                </li>
+                <li>
+                    <strong>Advanced backtesting engine</strong>
+                    <span>10+ years of historical data</span>
+                </li>
+            </ul>
+
+            <div class="pricing-box">
+                <div>
+                    <span class="plan">Pro Plan</span>
+                    <h3>$19 <small>/ month</small></h3>
+                </div>
+                <span class="best">Best Value</span>
+            </div>
+
+            <button class="upgrade-btn">
+                Upgrade to Pro →
+            </button>
+
+            <div class="secure-text">
+                <span>🔒 Secure payment</span>
+                <span>❌ Cancel anytime</span>
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="support">
+        Need help? <a href="/about_help/">Contact Support</a>
+    </div>
+
+</div>
+
+{% endblock %}

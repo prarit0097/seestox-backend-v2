@@ -1,0 +1,43 @@
+{% extends "layout/base.html" %}
+{% load static %}
+
+{% block title %}Stock Search – AIStockTool{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{% static 'css/stock_search/stock_search.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="stock-search-page">
+
+    <!-- HERO -->
+    <section class="search-hero">
+        <h1>Which stock would you like to analyze?</h1>
+        <p>Get real-time, AI-powered insights instantly.</p>
+    </section>
+
+    <!-- SEARCH BOX -->
+    <div class="stock-search-box">
+        <span class="icon">🔍</span>
+
+        <input
+            id="stock-search-input"
+            type="text"
+            placeholder="Search by ticker (e.g., AAPL), company or ISIN..."
+            autocomplete="off"
+        />
+
+        <button id="analyze-btn" type="button">Analyze</button>
+    </div>
+
+    <!-- AUTOCOMPLETE -->
+    <div id="search-suggestions" class="suggestions hidden"></div>
+
+   
+</div>
+
+<script src="{% static 'js/stock_search/stock_detail_redirect.js' %}"></script>
+<script src="{% static 'js/stock_search/analyze.js' %}"></script>
+
+{% endblock %}

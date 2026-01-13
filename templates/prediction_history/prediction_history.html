@@ -1,0 +1,186 @@
+{% extends "layout/base.html" %}
+{% load static %}
+
+{% block title %}Prediction History – AIStockTool{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{% static 'css/prediction_history/prediction_history.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<!-- ===== PAGE HEADER ===== -->
+<div class="ph-header">
+    <div>
+        <h1>Prediction History</h1>
+        <p>Transparency Report: AI Performance vs. Market Reality</p>
+    </div>
+
+    <button class="export-btn">
+        ⬇ Export Data
+    </button>
+</div>
+
+<!-- ===== STATS ===== -->
+<div class="ph-stats">
+
+    <div class="stat-card">
+        <p class="label">Overall Accuracy (30d)</p>
+        <div class="value-row">
+            <h2>87%</h2>
+            <span class="up">▲ 2.1%</span>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <p class="label">Total Predictions</p>
+        <div class="value-row">
+            <h2>1,240</h2>
+            <span class="up">▲ 15%</span>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <p class="label">Net Profit Factor</p>
+        <div class="value-row">
+            <h2>+12.4%</h2>
+            <span class="up">▲ 4.2%</span>
+        </div>
+    </div>
+
+</div>
+
+<!-- ===== FILTER BAR ===== -->
+<div class="ph-filters">
+
+    <select>
+        <option>Last 30 Days</option>
+        <option>Last Quarter</option>
+        <option>All Time</option>
+    </select>
+
+    <select>
+        <option>All Assets</option>
+        <option>Stocks</option>
+        <option>Crypto</option>
+    </select>
+
+    <div class="toggle">
+        <span>Auto-Generated</span>
+        <label class="switch">
+            <input type="checkbox" checked>
+            <span class="slider"></span>
+        </label>
+    </div>
+
+    <input class="search" placeholder="Search ticker...">
+
+</div>
+
+<!-- ===== TABLE ===== -->
+<div class="ph-table-wrapper">
+
+<table class="ph-table">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Asset</th>
+            <th>Signal Source</th>
+            <th>Prediction Range</th>
+            <th>Actual Close</th>
+            <th>Accuracy</th>
+            <th></th>
+        </tr>
+    </thead>
+
+    <tbody>
+
+        <tr>
+            <td>Oct 24, 2023</td>
+            <td>
+                <strong>TSLA</strong>
+                <span class="sub">Tesla Inc.</span>
+            </td>
+            <td><span class="tag auto">AUTO-AI</span></td>
+            <td>$210.00 – $218.00</td>
+            <td>
+                <strong>$214.50</strong>
+                <span class="up">+2.14%</span>
+            </td>
+            <td>
+                <span class="match good">98% Match</span>
+            </td>
+            <td>›</td>
+        </tr>
+
+        <tr>
+            <td>Oct 23, 2023</td>
+            <td>
+                <strong>NVDA</strong>
+                <span class="sub">NVIDIA Corp</span>
+            </td>
+            <td><span class="tag user">USER-REQ</span></td>
+            <td>$420.50 – $435.00</td>
+            <td>
+                <strong>$429.15</strong>
+                <span class="up">+1.85%</span>
+            </td>
+            <td>
+                <span class="match good">92% Match</span>
+            </td>
+            <td>›</td>
+        </tr>
+
+        <tr>
+            <td>Oct 22, 2023</td>
+            <td>
+                <strong>BTC</strong>
+                <span class="sub">Bitcoin</span>
+            </td>
+            <td><span class="tag auto">AUTO-AI</span></td>
+            <td>$33,500 – $34,200</td>
+            <td>
+                <strong>$32,900</strong>
+                <span class="down">-1.20%</span>
+            </td>
+            <td>
+                <span class="match bad">Outside Range</span>
+            </td>
+            <td>›</td>
+        </tr>
+
+        <tr>
+            <td>Oct 21, 2023</td>
+            <td>
+                <strong>AAPL</strong>
+                <span class="sub">Apple Inc.</span>
+            </td>
+            <td><span class="tag auto">AUTO-AI</span></td>
+            <td>$172.00 – $175.50</td>
+            <td>
+                <strong>$172.10</strong>
+                <span class="flat">0.05%</span>
+            </td>
+            <td>
+                <span class="match warn">Borderline</span>
+            </td>
+            <td>›</td>
+        </tr>
+
+    </tbody>
+</table>
+
+<div class="pagination">
+    <span>Showing 1 to 5 of 1,240</span>
+    <div class="pages">
+        <button disabled>Prev</button>
+        <button class="active">1</button>
+        <button>2</button>
+        <button>3</button>
+        <button>Next</button>
+    </div>
+</div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,15 @@
+{
+  "trained_on": "2025-12-31T15:46:57.352825",
+  "samples": 20,
+  "features": 7,
+  "models": [
+    "linear_low",
+    "linear_high",
+    "rf_low",
+    "rf_high",
+    "gb_low",
+    "gb_high",
+    "xgb_low",
+    "xgb_high"
+  ]
+}

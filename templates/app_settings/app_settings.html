@@ -1,0 +1,164 @@
+{% extends "layout/base.html" %}
+{% load static %}
+
+{% block title %}General Settings – AIStockTool{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{% static 'css/app_settings/app_settings.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<!-- ===== PAGE HEADER ===== -->
+<div class="settings-header">
+    <div>
+        <h1>General Settings</h1>
+        <p>Manage your profile details and workspace preferences.</p>
+    </div>
+</div>
+
+<div class="settings-layout">
+
+    <!-- ===== LEFT MENU ===== -->
+    <aside class="settings-sidebar">
+        <p class="sidebar-title">Settings</p>
+
+        <a class="side-link active">
+            👤 Account
+        </a>
+        <a class="side-link">
+            🔔 Notifications
+        </a>
+        <a class="side-link">
+            🎨 Appearance
+        </a>
+        <a class="side-link">
+            🛡 Data & Privacy
+        </a>
+        <a class="side-link">
+            🔑 API Keys
+        </a>
+
+        <div class="pro-box">
+            <p class="pro-title">Pro Plan</p>
+            <div class="progress">
+                <div class="progress-bar"></div>
+            </div>
+            <p class="pro-usage">80% of AI tokens used</p>
+            <button class="upgrade-btn">Upgrade Plan</button>
+        </div>
+    </aside>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <section class="settings-content">
+
+        <!-- PROFILE CARD -->
+        <div class="card account-card">
+
+            <div class="account-header">
+                <div class="user-info">
+                    <div class="avatar"></div>
+                    <div>
+                        <h3>Alex Trader</h3>
+                        <p><span class="tag-pro">PRO</span> Member since 2023</p>
+                    </div>
+                </div>
+
+                <div class="account-actions">
+                    <button class="btn ghost">Remove</button>
+                    <button class="btn secondary">Change Avatar</button>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div>
+                    <label>Full Name</label>
+                    <input type="text" value="Alex Trader">
+                </div>
+
+                <div>
+                    <label>Email Address</label>
+                    <input type="email" value="alex@trader.ai">
+                </div>
+
+                <div>
+                    <label>Username</label>
+                    <input type="text" value="alextrader_99">
+                </div>
+
+                <div>
+                    <label>Timezone</label>
+                    <select>
+                        <option>Pacific Standard Time (PST)</option>
+                        <option>Eastern Standard Time (EST)</option>
+                        <option>GMT</option>
+                    </select>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- DASHBOARD CONFIG -->
+        <div class="card">
+
+            <div class="card-head">
+                <div>
+                    <h4>Dashboard Configuration</h4>
+                    <p>Customize your trading view experience.</p>
+                </div>
+            </div>
+
+            <div class="toggle-row">
+                <div class="toggle-info">
+                    <div class="icon blue">📈</div>
+                    <div>
+                        <strong>Real-time Tickers</strong>
+                        <span>Stream live data without manual refresh.</span>
+                    </div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="toggle-row">
+                <div class="toggle-info">
+                    <div class="icon purple">🧠</div>
+                    <div>
+                        <strong>AI Confidence Score</strong>
+                        <span>Show predictive confidence percentage.</span>
+                    </div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="toggle-row">
+                <div class="toggle-info">
+                    <div class="icon green">📰</div>
+                    <div>
+                        <strong>Market News Feed</strong>
+                        <span>Display relevant news next to stock details.</span>
+                    </div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+        </div>
+
+        <!-- ACTIONS -->
+        <div class="action-bar">
+            <button class="btn ghost">Cancel</button>
+            <button class="btn primary">Save Changes</button>
+        </div>
+
+    </section>
+</div>
+
+{% endblock %}

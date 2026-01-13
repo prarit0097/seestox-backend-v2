@@ -1,0 +1,121 @@
+{% extends "layout/base.html" %}
+{% load static %}
+
+{% block title %}My Profile – AIStockTool{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{% static 'css/profile/profile.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="profile-container">
+
+    <!-- PAGE HEADER -->
+    <div class="profile-header">
+        <h1>My Profile</h1>
+        <p>Account details & subscription information</p>
+    </div>
+
+    {% if request.GET.updated %}
+    <div class="success-toast">
+        ✅ Profile updated successfully
+    </div>
+    {% endif %}
+
+    <!-- PROFILE CARD -->
+    <div class="profile-card">
+
+        <div class="profile-left">
+            <div class="avatar">
+                {% if request.user.profile.avatar %}
+                    <img src="{{ request.user.profile.avatar.url }}" alt="Avatar">
+                {% else %}
+                    <span>{{ request.user.first_name|first|upper }}</span>
+                {% endif %}
+            </div>
+
+            <div class="user-details">
+                <h2>{{ request.user.get_full_name }}</h2>
+                <p>{{ request.user.email }}</p>
+                <span class="status active">Active User</span>
+            </div>
+        </div>
+
+        <div class="profile-actions">
+            <button id="editProfileBtn" class="btn-outline">Edit Profile</button>
+            <a href="/accounts/logout/" class="btn-danger">Logout</a>
+        </div>
+
+    </div>
+
+    <!-- SUBSCRIPTION CARD -->
+    <div class="subscription-card">
+        <div>
+            {% if subscription_status == "PAID" %}
+                <p class="sub-active">Active Subscription</p>
+                <p class="sub-plan">AIStockTool Pro - {{ subscription_plan }}</p>
+                {% if subscription_end %}
+                    <p class="sub-end">Ends on {{ subscription_end|date:"d M Y" }}</p>
+                {% endif %}
+            {% elif subscription_status == "TRIAL" %}
+                <p class="sub-active trial">Trial Active</p>
+                {% if subscription_end %}
+                    <p class="sub-plan">Trial ends on {{ subscription_end|date:"d M Y" }}</p>
+                {% endif %}
+            {% elif subscription_status == "TRIAL_EXPIRED" %}
+                <p class="sub-expired">Trial Expired</p>
+                {% if subscription_end %}
+                    <p class="sub-plan">Ended on {{ subscription_end|date:"d M Y" }}</p>
+                {% endif %}
+            {% elif subscription_status == "FREE" %}
+                <p class="sub-expired">Free Plan</p>
+                <p class="sub-plan">Upgrade required</p>
+            {% else %}
+                <p class="sub-expired">No Subscription</p>
+            {% endif %}
+
+        </div>
+
+        <a href="/subscription/" class="btn-primary">
+            Manage Subscription
+        </a>
+    </div>
+
+    <!-- EDIT PROFILE (HIDDEN) -->
+    <div id="edit-profile-section" class="edit-profile">
+
+        <h3>Edit Profile</h3>
+
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" name="full_name"
+                       value="{{ request.user.get_full_name }}">
+            </div>
+
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" value="{{ request.user.email }}" disabled>
+            </div>
+
+            <div class="form-group">
+                <label>Profile Photo</label>
+                <input type="file" name="avatar">
+            </div>
+
+            <div class="form-actions">
+                <button type="button" id="cancelEdit" class="btn-outline">Cancel</button>
+                <button type="submit" class="btn-primary">Save Changes</button>
+            </div>
+
+        </form>
+    </div>
+
+</div>
+
+<script src="{% static 'js/profile/profile.js' %}"></script>
+
+{% endblock %}

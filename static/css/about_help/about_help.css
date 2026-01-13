@@ -1,0 +1,75 @@
+.about-page {
+    max-width: 1100px;
+    margin: auto;
+    padding: 32px;
+}
+
+/* HEADER */
+.about-header {
+    max-width: 720px;
+    margin-bottom: 40px;
+}
+
+.about-header h1 {
+    font-size: 36px;
+    font-weight: 800;
+    margin-bottom: 12px;
+}
+
+.about-header p {
+    color: #9bb3c7;
+    line-height: 1.6;
+    font-size: 16px;
+}
+
+/* CARDS */
+.about-card {
+    background: rgba(15, 23, 42, 0.65);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255,255,255,0.04);
+}
+
+.about-card h2 {
+    font-size: 20px;
+    margin-bottom: 12px;
+}
+
+.about-card p {
+    color: #a8bfd1;
+    line-height: 1.7;
+    font-size: 15px;
+}
+
+.about-card ul {
+    padding-left: 18px;
+}
+
+.about-card ul li {
+    color: #a8bfd1;
+    margin-bottom: 8px;
+    font-size: 15px;
+}
+
+/* CONTACT */
+.contact-card {
+    background: rgba(0, 170, 255, 0.08);
+    border: 1px solid rgba(0, 170, 255, 0.25);
+}
+
+.contact-email {
+    font-weight: 600;
+    color: #4fc3ff;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+    .about-page {
+        padding: 20px;
+    }
+
+    .about-header h1 {
+        font-size: 28px;
+    }
+}

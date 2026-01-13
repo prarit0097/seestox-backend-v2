@@ -1,0 +1,229 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+}
+
+body {
+    background: radial-gradient(circle at top, #0f172a, #020617);
+    color: #e5e7eb;
+}
+
+
+/* NAVBAR */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 80px;
+}
+
+.logo {
+    font-weight: 700;
+    font-size: 20px;
+}
+
+.btn-outline {
+    border: 1px solid #3bbcff;
+    padding: 10px 18px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #3bbcff;
+}
+
+/* HERO */
+.hero {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 60px;
+    padding: 80px;
+    align-items: center;
+}
+
+.badge {
+    display: inline-block;
+    background: rgba(59,188,255,0.15);
+    color: #3bbcff;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    margin-bottom: 20px;
+}
+
+.hero h1 {
+    font-size: 48px;
+    line-height: 1.15;
+    margin-bottom: 20px;
+}
+
+.hero h1 > span {
+    color: #3bbcff;
+}
+
+
+.subtitle {
+    max-width: 520px;
+    color: #c7d2d9;
+    margin-bottom: 20px;
+}
+
+.features li {
+    list-style: none;
+    margin-bottom: 10px;
+    color: #d7e6ee;
+}
+
+.cta {
+    margin-top: 30px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.btn-primary {
+    background: #ffffff;
+    color: #000;
+    padding: 14px 26px;
+    border-radius: 10px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.note {
+    font-size: 13px;
+    color: #9fb3bf;
+}
+
+.hero-visual img {
+    width: 100%;
+    border-radius: 14px;
+}
+
+/* ACCESS */
+.access {
+    text-align: center;
+    padding: 80px 40px;
+}
+
+.access-steps {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin-top: 40px;
+}
+
+.step {
+    background: rgba(255,255,255,0.05);
+    padding: 24px;
+    border-radius: 12px;
+    width: 220px;
+}
+
+/* PLATFORM */
+.platform {
+    padding: 80px;
+    text-align: center;
+}
+
+.cards {
+    margin-top: 40px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 20px;
+}
+
+.card {
+    background: rgba(255,255,255,0.05);
+    padding: 24px;
+    border-radius: 14px;
+}
+
+/* FINAL CTA */
+.final-cta {
+    text-align: center;
+    padding: 80px 40px;
+}
+
+/* FOOTER */
+.footer {
+    text-align: center;
+    padding: 30px;
+    font-size: 13px;
+    color: #8fa3ad;
+}
+
+.muted {
+    margin-top: 6px;
+}
+
+/* Google Login Button */
+.g-button-pro {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+
+    padding: 12px 18px;
+    margin-top: 22px;
+
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+
+    color: #f8fafc;
+    background: rgba(255, 255, 255, 0.08);
+
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 10px;
+
+    text-decoration: none;
+    cursor: pointer;
+
+    backdrop-filter: blur(8px);
+    transition: all 0.25s ease;
+}
+
+/* Hover */
+.g-button-pro:hover {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.35);
+    transform: translateY(-1px);
+}
+
+/* Active */
+.g-button-pro:active {
+    transform: translateY(0);
+}
+
+/* Text inside */
+.g-button-pro span {
+    line-height: 1;
+    white-space: nowrap;
+}
+
+/* SVG fix */
+.g-button-pro svg {
+    flex-shrink: 0;
+    display: block;
+}
+
+/* LOGOUT BUTTON */
+.user a {
+    display: inline-block;
+    margin-left: 12px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #ffffff;
+    background: linear-gradient(135deg, #ff4d4d, #ff1f1f);
+    border-radius: 20px;
+    text-decoration: none;
+    transition: all 0.25s ease;
+}
+
+/* HOVER EFFECT */
+.user a:hover {
+    background: linear-gradient(135deg, #ff1f1f, #d60000);
+    box-shadow: 0 4px 12px rgba(255, 77, 77, 0.4);
+    transform: translateY(-1px);
+}

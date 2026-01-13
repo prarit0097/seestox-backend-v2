@@ -1,0 +1,69 @@
+{% extends "layout/base.html" %}
+{% load static %}
+
+{% block title %}About & Help | AIStockTool{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{% static 'css/about_help/about_help.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="about-page">
+
+    <!-- HEADER -->
+    <div class="about-header">
+        <h1>About AIStockTool</h1>
+        <p>
+            AIStockTool is an AI-powered stock analysis platform designed to help
+            Indian investors take smarter, data-driven decisions.
+        </p>
+    </div>
+
+    <!-- SECTION -->
+    <div class="about-card">
+        <h2>🚀 What We Do</h2>
+        <p>
+            We combine market data, technical indicators, sentiment analysis and AI
+            to simplify stock analysis for traders and long-term investors.
+        </p>
+    </div>
+
+    <div class="about-card">
+        <h2>🧠 How AIStockTool Helps You</h2>
+        <ul>
+            <li>📊 Stock trend & sentiment analysis</li>
+            <li>🤖 AI-based explanations (not tips)</li>
+            <li>📝 Watchlist & prediction history</li>
+            <li>⚡ Fast, distraction-free interface</li>
+        </ul>
+    </div>
+
+    <div class="about-card">
+        <h2>🔒 Data & Privacy</h2>
+        <p>
+            We respect your privacy. Your personal data is never sold or shared.
+            AIStockTool only uses your data to improve your experience inside the platform.
+        </p>
+    </div>
+
+    <div class="about-card">
+        <h2>⚠️ Disclaimer</h2>
+        <p>
+            AIStockTool does not provide investment advice. All insights are
+            informational and educational only. Please consult a financial advisor
+            before making investment decisions.
+        </p>
+    </div>
+
+    <div class="about-card contact-card">
+        <h2>📩 Need Help?</h2>
+        <p>
+            For support or queries, reach out to us at:
+        </p>
+        <p class="contact-email">support@aistocktool.com</p>
+    </div>
+
+</div>
+
+{% endblock %}

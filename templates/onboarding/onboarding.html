@@ -1,0 +1,49 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Welcome to AIStockTool</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="{% static 'css/onboarding/onboarding.css' %}">
+</head>
+<body>
+
+<div class="onboarding-wrapper">
+
+    <div class="onboarding-card">
+
+        <h1>Welcome to <span>AIStockTool</span></h1>
+
+        <p class="subtitle">
+            Your AI-powered command center for smarter stock decisions.
+        </p>
+
+        <ul class="features">
+            <li>AI-powered stock signals with confidence scores</li>
+            <li>Market sentiment & risk analysis in one place</li>
+            <li>Transparent prediction history (no black box)</li>
+        </ul>
+
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="cta-btn">
+                Enter Dashboard →
+            </button>
+        </form>
+
+        <p class="note">
+            No setup required. You can customize everything later.
+        </p>
+
+    </div>
+
+</div>
+
+</body>
+</html>

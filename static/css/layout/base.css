@@ -1,0 +1,259 @@
+/* =========================
+   GLOBAL RESET
+========================= */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: radial-gradient(circle at top, #0b1c2d, #020617);
+    font-family: 'Inter', system-ui, sans-serif;
+    color: #e5e7eb;
+}
+
+/* =========================
+   TOP BAR
+========================= */
+.top-bar {
+    height: 64px;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #1f2937;
+}
+
+/* =========================
+   BRAND
+========================= */
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.brand-icon {
+    font-size: 20px;
+}
+
+.brand-text {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.brand .badge {
+    background: linear-gradient(90deg, #f59e0b, #ef4444);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+/* =========================
+   TRIAL BADGE
+========================= */
+.trial-badge {
+    padding: 4px 12px;
+    border-radius: 14px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-left: 10px;
+    white-space: nowrap;
+}
+
+.trial-badge.trial {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.trial-badge.expired {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.trial-badge.paid {
+    background: #d4edda;
+    color: #155724;
+}
+
+/* USER CONTAINER */
+.user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* USER FULL NAME */
+.user-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #eaf1f8;
+    letter-spacing: 0.3px;
+}
+
+/* SOFT HOVER EFFECT */
+.user-name:hover {
+    color: #ffffff;
+    text-shadow: 0 0 6px rgba(255, 255, 255, 0.35);
+}
+
+
+
+
+/* LOGOUT BUTTON */
+.user a {
+    display: inline-block;
+    margin-left: 12px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #ffffff;
+    background: linear-gradient(135deg, #ff4d4d, #ff1f1f);
+    border-radius: 20px;
+    text-decoration: none;
+    transition: all 0.25s ease;
+}
+
+/* HOVER EFFECT */
+.user a:hover {
+    background: linear-gradient(135deg, #ff1f1f, #d60000);
+    box-shadow: 0 4px 12px rgba(255, 77, 77, 0.4);
+    transform: translateY(-1px);
+}
+
+
+/* =========================
+   MARKET STATUS BAR
+========================= */
+.market-status-bar {
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 13px;
+    border-bottom: 1px solid #1f2937;
+    background: rgba(2, 6, 23, 0.75);
+}
+
+.market-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    background: #ef4444;
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+    animation: blink 1.2s infinite;
+}
+
+@keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0.35; }
+    100% { opacity: 1; }
+}
+
+/* =========================
+   LAYOUT
+========================= */
+.layout {
+    display: flex;
+    min-height: calc(100vh - 100px);
+}
+
+/* =========================
+   SIDEBAR
+========================= */
+.sidebar {
+    width: 240px;
+    background: #020617;
+    padding: 20px 16px;
+    border-right: 1px solid #1f2937;
+}
+
+.sidebar nav a {
+    display: flex;
+    align-items: center;
+    height: 40px;
+    padding: 0 14px;
+    margin-bottom: 6px;
+    font-size: 14px;
+    color: #cbd5e1;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: background 0.25s ease, color 0.25s ease;
+}
+
+.sidebar nav a.active {
+    background: #1e293b;
+    color: #ffffff;
+}
+
+.sidebar nav a:hover {
+    background: #111827;
+    color: #ffffff;
+}
+
+/* =========================
+   LOCKED NAV (TRIAL EXPIRED)
+========================= */
+.nav.locked,
+.nav-primary.locked {
+    opacity: 0.55;
+    position: relative;
+}
+
+
+
+/* =========================
+   PRIMARY CTA
+========================= */
+.nav-primary {
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    color: #e0f2fe;
+    font-weight: 600;
+    animation: stockPulse 2.2s infinite;
+}
+
+@keyframes stockPulse {
+    0% { box-shadow: 0 0 0 rgba(56,189,248,0); }
+    50% { box-shadow: 0 0 22px rgba(56,189,248,0.45); }
+    100% { box-shadow: 0 0 0 rgba(56,189,248,0); }
+}
+
+/* =========================
+   MAIN CONTENT
+========================= */
+.content {
+    flex: 1;
+    padding: 28px 36px;
+}
+
+/* =========================
+   TRIAL EXPIRED PAGE TEXT FIX
+========================= */
+.trial-card {
+    background: linear-gradient(
+        180deg,
+        rgba(15, 23, 42, 0.88),
+        rgba(2, 6, 23, 0.96)
+    );
+    border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.trial-card h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 14px;
+    line-height: 1.25;
+    text-shadow: 0 2px 14px rgba(0,0,0,0.5);
+}
+
+.trial-card p {
+    font-size: 15px;
+    color: #cbd5e1;
+    line-height: 1.6;
+    max-width: 520px;
+}
+

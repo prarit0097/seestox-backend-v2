@@ -1,0 +1,58 @@
+# core_engine/scheduler.py
+
+import logging
+
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED, EVENT_JOB_MISSED
+
+scheduler = BackgroundScheduler(timezone="Asia/Kolkata")
+logger = logging.getLogger("core_engine.scheduler")
+
+def _job_listener(event):
+    if event.exception:
+        logger.error("Job %s failed", event.job_id, exc_info=event.exception)
+        return
+    if event.code == EVENT_JOB_MISSED:
+        logger.warning("Job %s missed", event.job_id)
+        return
+    logger.info("Job %s executed successfully", event.job_id)
+
+def start_scheduler():
+    if scheduler.running:
+        logger.info("Scheduler already running")
+        return
+
+    # IMPORTS INSIDE FUNCTION
+    from core_engine.auto_prediction_runner import run_auto_predictions
+    from core_engine.prediction_evaluator import run_prediction_evaluator
+    from core_engine.ml_engine.scheduler.daily_scheduler import run_daily_ml_cycle
+
+    scheduler.add_job(
+        run_auto_predictions,
+        CronTrigger(hour=1, minute=00),
+        id="auto_predictions",
+        replace_existing=True
+    )
+
+    scheduler.add_job(
+        run_prediction_evaluator,
+        CronTrigger(hour=15, minute=45),
+        id="prediction_evaluator",
+        replace_existing=True
+    )
+
+    scheduler.add_job(
+        run_daily_ml_cycle,
+        CronTrigger(day_of_week="sat", hour=3, minute=00),
+        id="weekly_ml_competition",
+        replace_existing=True
+    )
+
+    scheduler.add_listener(
+        _job_listener,
+        EVENT_JOB_EXECUTED | EVENT_JOB_ERROR | EVENT_JOB_MISSED,
+    )
+    scheduler.start()
+    logger.info("Scheduler started successfully")
+    print("✅ Scheduler started successfully")

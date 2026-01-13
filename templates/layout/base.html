@@ -1,0 +1,109 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}AIStockTool{% endblock %}</title>
+
+    <link rel="stylesheet" href="{% static 'css/layout/base.css' %}">
+    {% block css %}{% endblock %}
+</head>
+
+<body>
+
+<header class="top-bar">
+    <div class="brand">
+        <span class="brand-icon">📊</span>
+        <span class="brand-text">AIStockTool</span>
+       <!--  <span class="badge">PRO</span>    -->
+
+        {% if trial_badge %}
+            <span class="trial-badge {{ trial_badge.type }}">
+                {{ trial_badge.label }}
+            </span>
+        {% endif %}
+    </div>
+
+   <div class="user">
+    <span class="user-name">{{ request.user.get_full_name }}</span>
+    <a href="/accounts/logout/">Logout</a>
+</div>
+</header>
+
+<!-- GLOBAL MARKET STATUS BAR -->
+<div class="market-status-bar">
+    <span id="market-status" class="market-dot" aria-hidden="true"></span>
+    <span id="market-status-text">MARKET CLOSED</span>
+    <span class="separator">|</span>
+    <span id="last-updated">Last updated: --</span>
+</div>
+
+<div class="layout">
+    <aside class="sidebar">
+        <nav>
+
+            {% if trial_badge and trial_badge.type == "expired" %}
+                <!-- 🔒 LOCKED NAV (CLICKABLE → MIDDLEWARE REDIRECTS) -->
+                <a href="/dashboard/" class="nav locked">🔒 Dashboard</a>
+                <a href="/search/" class="nav-primary locked">🔒 Stock Search</a>
+                <a href="/stock_chat/" class="nav locked">🔒 Stock Chat</a>
+                <a href="/watchlist/" class="nav locked">🔒 Watchlist</a>
+                <a href="/market_news/" class="nav locked">🔒 Market News</a>
+            {% else %}
+                <!-- 🟢 NORMAL NAV -->
+                <a href="/dashboard/" class="{% if request.path == '/dashboard/' %}active{% endif %}">
+                    Dashboard
+                </a>
+
+                <a href="/search/"
+                   class="nav-primary {% if request.path == '/search/' %}active{% endif %}">
+                    🔍 Stock Search
+                </a>
+
+                <a href="/stock_chat/" class="{% if request.path == '/stock_chat/' %}active{% endif %}">
+                    Stock Chat
+                </a>
+
+                <a href="/watchlist/" class="{% if request.path == '/watchlist/' %}active{% endif %}">
+                    Watchlist
+                </a>
+
+                <a href="/market_news/" class="{% if request.path == '/market_news/' %}active{% endif %}">
+                    Market News
+                </a>
+            {% endif %}
+
+            <!-- 🟢 ALWAYS ALLOWED -->
+            <a href="/profile/" class="{% if request.path == '/profile/' %}active{% endif %}">
+                Profile
+            </a>
+
+            <a href="/about_help/" class="{% if request.path == '/about_help/' %}active{% endif %}">
+                About / Help
+            </a>
+
+            <a href="/terms/" class="{% if request.path == '/terms/' %}active{% endif %}">
+                Terms & Conditions / Help
+            </a>
+
+            <a href="/privacypolicy/" class="{% if request.path == '/privacypolicy/' %}active{% endif %}">
+                Privacy Policy / Help
+            </a>
+            
+
+        </nav>
+    </aside>
+
+    <main class="content">
+        {% block content %}{% endblock %}
+    </main>
+</div>
+
+{% block js %}{% endblock %}
+
+<!-- GLOBAL MARKET STATUS JS -->
+<script src="{% static 'js/layout/global_market_status.js' %}"></script>
+
+</body>
+</html>
+
