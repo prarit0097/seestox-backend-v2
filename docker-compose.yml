@@ -1,0 +1,10 @@
+services:
+  backend:
+    build: .
+    container_name: seestox-backend
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env

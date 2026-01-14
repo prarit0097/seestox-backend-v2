@@ -3,7 +3,8 @@ venv/
 .venv/
 __pycache__/
 *.pyc
-
+venv312/
+.venv312/
 # env/secrets
 .env
 .env.*
