@@ -18,3 +18,7 @@ media/
 
 # misc
 replacements.txt
+
+# Ignore local sqlite db
+db.sqlite3
+
