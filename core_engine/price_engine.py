@@ -18,7 +18,26 @@ LOCK = threading.Lock()
 def _fetch_quote_from_yahoo(symbol: str):
     try:
         ticker = yf.Ticker(symbol + ".NS")
-        data = ticker.history(period="2d")
+        data = ticker.history(period="5d")
+
+        if data.empty:
+            return None, None
+
+        closes = data["Close"].dropna().tolist()
+        if not closes:
+            return None, None
+
+        close = float(closes[-1])
+        prev = float(closes[-2]) if len(closes) >= 2 else None
+        change_pct = None
+        if prev and prev != 0:
+            change_pct = round(((close - prev) / prev) * 100, 2)
+
+        return round(close, 2), change_pct
+
+    except Exception:
+        return None, None
+
 
         if data.empty:
             return None, None
