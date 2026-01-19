@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -7,78 +8,98 @@ from typing import Dict, List, Tuple
 logger = logging.getLogger("core_engine.ml_engine.expected_range.dataset_builder")
 
 
-def _find_repo_root() -> Path:
+def _find_repo_root() -> Path | None:
     current = Path(__file__).resolve()
     for parent in current.parents:
         if (parent / "manage.py").exists():
             return parent
-    fallback_root = current.parents[3] if len(current.parents) > 3 else current.parent
-    return fallback_root
+    return None
 
 
-_REPO_ROOT = _find_repo_root()
-_PREFERRED_HISTORY = _REPO_ROOT / "prediction_history.json"
-_FALLBACK_HISTORY = _REPO_ROOT / "core_engine" / "prediction_history.json"
-_LEGACY_FALLBACK = _REPO_ROOT / "core_engine" / "ml_engine" / "prediction_history.json"
-_HISTORY_CANDIDATES = [
-    _PREFERRED_HISTORY,
-    _FALLBACK_HISTORY,
-    _LEGACY_FALLBACK,
-]
+def _candidate_paths() -> List[Path]:
+    candidates: List[Path] = []
+
+    env_path = os.getenv("SEESTOX_PREDICTION_HISTORY_PATH")
+    if env_path:
+        candidates.append(Path(env_path))
+
+    candidates.append(Path.cwd() / "prediction_history.json")
+
+    repo_root = _find_repo_root()
+    if repo_root:
+        candidates.append(repo_root / "prediction_history.json")
+        candidates.append(repo_root / "core_engine" / "prediction_history.json")
+        candidates.append(repo_root / "core_engine" / "ml_engine" / "prediction_history.json")
+
+    return candidates
+
+
+def _parse_history_file(history_file: Path) -> List[Dict]:
+    try:
+        with history_file.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        logger.exception("Failed to load prediction history as JSON: %s", history_file)
+        return []
+
+    records: List[Dict] = []
+    if isinstance(data, list):
+        records = data
+    elif isinstance(data, dict):
+        for value in data.values():
+            if isinstance(value, list):
+                for item in value:
+                    if isinstance(item, dict):
+                        records.append(item)
+    else:
+        logger.warning("Prediction history file has unexpected structure: %s", history_file)
+        records = []
+
+    return records
 
 
 def _load_history() -> List[Dict]:
-    last_error = None
-    for candidate in _HISTORY_CANDIDATES:
+    candidates = _candidate_paths()
+    first_existing_records = None
+    first_existing_path = None
+
+    for candidate in candidates:
         if not candidate.exists():
+            logger.debug("Prediction history candidate missing: %s", candidate)
             continue
 
-        try:
-            with candidate.open("r", encoding="utf-8") as f:
-                data = json.load(f)
-        except Exception as exc:
-            last_error = exc
-            logger.exception("Failed to load prediction history as JSON: %s", candidate)
-            continue
-
-        records: List[Dict] = []
-        if isinstance(data, list):
-            records = data
-        elif isinstance(data, dict):
-            for value in data.values():
-                if isinstance(value, list):
-                    for item in value:
-                        if isinstance(item, dict):
-                            records.append(item)
-        else:
-            logger.warning("Prediction history file has unexpected structure: %s", candidate)
-            records = []
-
+        records = _parse_history_file(candidate)
         evaluated_true = sum(
             1 for record in records
             if isinstance(record, dict) and record.get("evaluated") is True
         )
-        logger.info(
-            "Prediction history selected: path=%s records=%s evaluated_true=%s",
-            candidate,
-            len(records),
-            evaluated_true,
-        )
 
-        if records and evaluated_true > 0:
+        if first_existing_records is None:
+            first_existing_records = records
+            first_existing_path = candidate
+
+        if evaluated_true > 0:
+            logger.info(
+                "Prediction history selected: %s (records=%s evaluated_true=%s)",
+                candidate,
+                len(records),
+                evaluated_true,
+            )
             return records
 
-        if records and evaluated_true == 0:
-            logger.debug(
-                "Prediction history has no evaluated records: %s",
-                candidate,
-            )
-            continue
+        logger.debug(
+            "Prediction history rejected (no evaluated records): %s",
+            candidate,
+        )
 
-    if last_error is not None:
-        logger.warning("Prediction history load failed for all candidates")
-    else:
-        logger.warning("Prediction history file missing: %s", _HISTORY_CANDIDATES)
+    if first_existing_records is not None and first_existing_path is not None:
+        logger.warning(
+            "No evaluated records found; using first existing history file: %s",
+            first_existing_path,
+        )
+        return first_existing_records
+
+    logger.warning("Prediction history file missing: %s", candidates)
     return []
 
 
@@ -88,14 +109,46 @@ def _resolve_expected_range(record: Dict) -> Dict | None:
         return expected
 
     prediction = record.get("prediction")
+    if isinstance(prediction, dict) and prediction.get("low") is not None and prediction.get("high") is not None:
+        return prediction
+
+    nested = None
     if isinstance(prediction, dict):
-        if prediction.get("low") is not None and prediction.get("high") is not None:
-            return prediction
         nested = prediction.get("expected_range")
-        if isinstance(nested, dict) and nested.get("low") is not None and nested.get("high") is not None:
-            return nested
+    if isinstance(nested, dict) and nested.get("low") is not None and nested.get("high") is not None:
+        return nested
 
     return None
+
+
+def _resolve_actual_close(record: Dict):
+    actual_close = record.get("actual_close")
+    if actual_close is None:
+        actual_close = record.get("close")
+    if actual_close is None:
+        actual_close = record.get("actual")
+    return actual_close
+
+
+def _resolve_context(record: Dict) -> Dict:
+    context = record.get("context", {})
+    if not isinstance(context, dict):
+        context = {}
+    if context.get("price") is None and record.get("price") is not None:
+        context["price"] = record.get("price")
+    if context.get("atr") is None and record.get("atr") is not None:
+        context["atr"] = record.get("atr")
+    if context.get("trend") is None and record.get("trend") is not None:
+        context["trend"] = record.get("trend")
+    if context.get("sentiment") is None and record.get("sentiment") is not None:
+        context["sentiment"] = record.get("sentiment")
+    if context.get("risk") is None and record.get("risk") is not None:
+        context["risk"] = record.get("risk")
+    if context.get("risk_score") is None and record.get("risk_score") is not None:
+        context["risk_score"] = record.get("risk_score")
+    if context.get("volatility_regime") is None and record.get("volatility_regime") is not None:
+        context["volatility_regime"] = record.get("volatility_regime")
+    return context
 
 
 def build_expected_range_dataset(
@@ -120,6 +173,7 @@ def build_expected_range_dataset(
         "invalid_low_high": 0,
         "range_width_non_positive": 0,
     }
+    evaluated_true_count = 0
 
     X: List[List[float]] = []
     y_low: List[float] = []
@@ -140,23 +194,19 @@ def build_expected_range_dataset(
             skip_counts["missing_evaluated"] += 1
             continue
 
+        evaluated_true_count += 1
+
         expected = _resolve_expected_range(record)
         if not isinstance(expected, dict):
             skip_counts["missing_expected_range"] += 1
             continue
 
-        actual_close = record.get("actual_close")
-        if actual_close is None:
-            actual_close = record.get("price")
+        actual_close = _resolve_actual_close(record)
         if actual_close is None:
             skip_counts["missing_actual_close"] += 1
             continue
 
-        context = record.get("context", {})
-        if not isinstance(context, dict):
-            context = {}
-        if context.get("price") is None and record.get("price") is not None:
-            context["price"] = record.get("price")
+        context = _resolve_context(record)
 
         try:
             expected_low_raw = expected.get("low")
@@ -259,9 +309,10 @@ def build_expected_range_dataset(
         actual_closes.append(actual_close)
 
     logger.debug(
-        "Expected range dataset summary: total=%s used=%s min_records=%s skipped=%s",
+        "Expected range dataset summary: total=%s used=%s evaluated_true=%s min_records=%s skipped=%s",
         total_records,
         len(X),
+        evaluated_true_count,
         min_records,
         skip_counts,
     )
