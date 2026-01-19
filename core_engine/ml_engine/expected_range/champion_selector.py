@@ -3,11 +3,14 @@
 
 import os
 import json
+import logging
 from datetime import datetime
 from typing import Dict
 
 from core_engine.ml_engine.range_error_aggregator import aggregate_range_errors
 from core_engine.ml_engine.expected_range.model_registry import get_all_models
+
+logger = logging.getLogger("core_engine.ml_engine.expected_range.champion_selector")
 
 # ==================================================
 # PATH
@@ -62,6 +65,7 @@ def select_champion(scorecard: Dict) -> Dict:
         }
 
     best_pair = None
+    best_score = float("-inf")
     best_hit = -1.0
     best_mae = float("inf")
 
@@ -74,8 +78,18 @@ def select_champion(scorecard: Dict) -> Dict:
         hit_rate = float(stats.get("hit_rate", 0))
         mae = float(stats.get("mae", float("inf")))
 
-        if hit_rate > best_hit or (hit_rate == best_hit and mae < best_mae):
+        # Composite score: scale hit_rate (0-1) to 0-100 so MAE can influence selection.
+        score = (hit_rate * 100.0) - (mae * 1.0)
+
+        if (
+            score > best_score
+            or (
+                score == best_score
+                and (hit_rate > best_hit or (hit_rate == best_hit and mae < best_mae))
+            )
+        ):
             best_pair = (low_name, high_name)
+            best_score = score
             best_hit = hit_rate
             best_mae = mae
 
@@ -95,6 +109,15 @@ def select_champion(scorecard: Dict) -> Dict:
         "updated_on": datetime.now().isoformat(),
         "note": "GLOBAL_CHAMPION",
     }
+
+    logger.info(
+        "Expected range champion selected: %s/%s (score=%.2f hit_rate=%.4f mae=%.4f)",
+        champion_low,
+        champion_high,
+        best_score,
+        best_hit,
+        best_mae,
+    )
 
     with open(CHAMPION_FILE, "w") as f:
         json.dump(champion_data, f, indent=2)

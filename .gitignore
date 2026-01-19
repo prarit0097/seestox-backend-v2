@@ -10,7 +10,8 @@ venv312/
 .env.*
 *.pem
 *.key
-
+# Runtime logs
+backend/logs/
 # django
 staticfiles/
 media/
@@ -22,3 +23,15 @@ replacements.txt
 # Ignore local sqlite db
 db.sqlite3
 
+# ML runtime artifacts
+core_engine/ml_engine/expected_range/models/*.joblib
+core_engine/ml_engine/expected_range/models/meta.json
+core_engine/ml_engine/expected_range/champion.json
+
+# Runtime state
+core_engine/prediction_history.json
+core_engine/sentiment_trend.json
+
+# OS
+.DS_Store
+Thumbs.db

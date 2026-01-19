@@ -25,6 +25,93 @@ REPORT_PATH = (
     Path(__file__).resolve().parents[3] / "backend" / "logs" / "ml_cycle_report.jsonl"
 )
 
+_LAST_EVAL_RESULT = None
+
+
+def _dedupe_symbols(symbols: list) -> list[str]:
+    cleaned = []
+    seen = set()
+    for sym in symbols or []:
+        if sym is None:
+            continue
+        if not isinstance(sym, str):
+            sym = str(sym)
+        sym = sym.strip()
+        if not sym or sym in seen:
+            continue
+        seen.add(sym)
+        cleaned.append(sym)
+    return cleaned
+
+
+def _get_symbols_for_global_cycle() -> list[str]:
+    eval_result = _LAST_EVAL_RESULT if isinstance(_LAST_EVAL_RESULT, dict) else {}
+    if eval_result:
+        for key in ("symbols", "symbol_list", "evaluated_symbols"):
+            candidate = eval_result.get(key)
+            if isinstance(candidate, list) and candidate:
+                symbols = _dedupe_symbols(candidate)
+                if symbols:
+                    return symbols
+
+    try:
+        from core_engine.ml_engine.expected_range.dataset_builder import _load_history as _load_expected_range_history
+        history = _load_expected_range_history()
+        symbols = _dedupe_symbols([r.get("symbol") for r in history if r.get("symbol")])
+        if symbols:
+            return symbols
+    except Exception:
+        logger.debug("Failed to load symbols from expected range history", exc_info=True)
+
+    try:
+        from core_engine.universe import TOP_100_STOCKS
+        symbols = _dedupe_symbols(TOP_100_STOCKS)
+        if symbols:
+            return symbols
+    except Exception:
+        logger.debug("Failed to load symbols from universe list", exc_info=True)
+
+    return ["RELIANCE", "TCS", "INFY", "HDFCBANK", "ICICIBANK", "SBIN", "ITC"]
+
+
+def _run_global_aggregation_and_bias(symbols: list[str]) -> dict:
+    aggregation_report = {
+        "status": "GLOBAL_DONE",
+        "processed": len(symbols),
+        "success": 0,
+        "failed": 0,
+        "errors": {},
+    }
+    bias_report = {
+        "status": "GLOBAL_DONE",
+        "processed": len(symbols),
+        "success": 0,
+        "failed": 0,
+        "errors": {},
+    }
+
+    for sym in symbols:
+        try:
+            aggregate_range_errors(sym)
+            aggregation_report["success"] += 1
+        except Exception as exc:
+            aggregation_report["failed"] += 1
+            aggregation_report["errors"][sym] = str(exc)
+            logger.warning("Aggregation failed for %s", sym, exc_info=True)
+
+        try:
+            learn_range_bias(sym)
+            bias_report["success"] += 1
+        except Exception as exc:
+            bias_report["failed"] += 1
+            bias_report["errors"][sym] = str(exc)
+            logger.warning("Bias learning failed for %s", sym, exc_info=True)
+
+    return {
+        "aggregation": aggregation_report,
+        "bias_learning": bias_report,
+    }
+
 
 def run_daily_ml_cycle(symbol: str = None) -> dict:
     """
@@ -44,14 +131,30 @@ def run_daily_ml_cycle(symbol: str = None) -> dict:
     # --------------------------------------------------
     eval_result = evaluate_expected_ranges()
     report["steps"]["evaluation"] = eval_result
+    global _LAST_EVAL_RESULT
+    _LAST_EVAL_RESULT = eval_result
+    logger.info("Evaluation status: %s", eval_result.get("status"))
+    try:
+        from core_engine.ml_engine.expected_range.dataset_builder import _load_history as _load_expected_range_history
+        history = _load_expected_range_history()
+        logger.info("Expected range history size: %s", len(history))
+    except Exception:
+        logger.debug("Failed to read expected range history size", exc_info=True)
 
     # --------------------------------------------------
     # 2. Aggregate Range Errors
     # --------------------------------------------------
+    global_results = None
     if symbol:
-        agg_result = aggregate_range_errors(symbol)
+        try:
+            agg_result = aggregate_range_errors(symbol)
+        except Exception as exc:
+            logger.warning("Aggregation failed for %s", symbol, exc_info=True)
+            agg_result = {"status": "ERROR", "note": str(exc)}
     else:
-        agg_result = {"status": "SKIPPED", "note": "No symbol provided"}
+        symbols = _get_symbols_for_global_cycle()
+        global_results = _run_global_aggregation_and_bias(symbols)
+        agg_result = global_results.get("aggregation", {"status": "ERROR", "note": "Aggregation failed"})
 
     report["steps"]["aggregation"] = agg_result
 
@@ -59,9 +162,16 @@ def run_daily_ml_cycle(symbol: str = None) -> dict:
     # 3. Learn Bias
     # --------------------------------------------------
     if symbol:
-        bias_result = learn_range_bias(symbol)
+        try:
+            bias_result = learn_range_bias(symbol)
+        except Exception as exc:
+            logger.warning("Bias learning failed for %s", symbol, exc_info=True)
+            bias_result = {"status": "ERROR", "note": str(exc)}
     else:
-        bias_result = {"status": "SKIPPED", "note": "No symbol provided"}
+        if global_results is None:
+            symbols = _get_symbols_for_global_cycle()
+            global_results = _run_global_aggregation_and_bias(symbols)
+        bias_result = global_results.get("bias_learning", {"status": "ERROR", "note": "Bias learning failed"})
 
     report["steps"]["bias_learning"] = bias_result
 
@@ -71,12 +181,22 @@ def run_daily_ml_cycle(symbol: str = None) -> dict:
     X, y_low, y_high, expected_lows, expected_highs, actual_closes = (
         build_expected_range_dataset()
     )
+    logger.info("Expected range dataset size: %s", len(X))
 
     if len(X) == 0:
         report["steps"]["training"] = {
             "status": "NO_DATA",
             "note": "Dataset empty"
         }
+        report["steps"]["scoring"] = {
+            "status": "SKIPPED",
+            "note": "Dataset empty"
+        }
+        report["steps"]["champion"] = {
+            "status": "SKIPPED",
+            "note": "Dataset empty"
+        }
+        _persist_report(report)
         return report
 
     # --------------------------------------------------
@@ -86,6 +206,8 @@ def run_daily_ml_cycle(symbol: str = None) -> dict:
     report["steps"]["training"] = train_result["status"]
 
     models = train_result.get("models", {})
+    if models:
+        logger.info("Trained expected range models: %s", len(models))
     if models:
         save_models(models, samples=len(X), feature_count=len(X[0]))
         refresh_registry()

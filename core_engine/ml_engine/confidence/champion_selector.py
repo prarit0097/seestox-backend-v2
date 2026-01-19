@@ -15,6 +15,9 @@ MIN_CHAMPION_SCORE = 55
 CHAMPION_LOCK_DAYS = 7
 FAILURE_KILL_SWITCH = 0.60  # 60%
 
+SUCCESS_TAGS = {"SUCCESS", "INSIDE_RANGE"}
+FAILURE_TAGS = {"FAILURE", "UPPER_BREAK", "LOWER_BREAK"}
+
 
 # ===============================
 # INTERNAL HELPERS
@@ -32,12 +35,26 @@ def _confidence_score(success, failure, neutral):
     )
 
 
+def _normalize_result_tag(result) -> str:
+    if not isinstance(result, str):
+        return ""
+    return result.strip().upper()
+
+
+def _is_success_result(result) -> bool:
+    return _normalize_result_tag(result) in SUCCESS_TAGS
+
+
+def _is_failure_result(result) -> bool:
+    return _normalize_result_tag(result) in FAILURE_TAGS
+
+
 def _get_recent_failure_rate(records, window=5):
     recent = records[-window:]
     if not recent:
         return 0.0
 
-    failures = sum(1 for r in recent if r.get("result") == "FAILURE")
+    failures = sum(1 for r in recent if _is_failure_result(r.get("result")))
     return failures / len(recent)
 
 
@@ -66,6 +83,24 @@ def load_confidence_champion(symbol: str) -> dict:
 def select_confidence_champion(symbol: str) -> dict:
     history = _load_history()
 
+    existing_champion = None
+    existing_index = None
+    for idx in range(len(history) - 1, -1, -1):
+        champ = history[idx].get("confidence_champion")
+        if champ and champ.get("symbol") == symbol:
+            existing_champion = champ
+            existing_index = idx
+            break
+
+    if existing_champion:
+        lock_until = existing_champion.get("lock_until")
+        if lock_until:
+            try:
+                if datetime.now() < datetime.fromisoformat(lock_until):
+                    return existing_champion
+            except Exception:
+                pass
+
     records = [
         r for r in history
         if r.get("symbol") == symbol and r.get("evaluated") is True
@@ -86,9 +121,17 @@ def select_confidence_champion(symbol: str) -> dict:
         }
 
     # ---------- AGGREGATE STATS ----------
-    success = sum(1 for r in records if r.get("result") == "SUCCESS")
-    failure = sum(1 for r in records if r.get("result") == "FAILURE")
-    neutral = sum(1 for r in records if r.get("result") not in ("SUCCESS", "FAILURE"))
+    success = 0
+    failure = 0
+    neutral = 0
+    for record in records:
+        tag = _normalize_result_tag(record.get("result"))
+        if tag in SUCCESS_TAGS:
+            success += 1
+        elif tag in FAILURE_TAGS:
+            failure += 1
+        else:
+            neutral += 1
 
     total = success + failure + neutral
     if total < MIN_MODEL_SAMPLES:
@@ -124,9 +167,12 @@ def select_confidence_champion(symbol: str) -> dict:
     }
 
     # ---------- STORE (LOCKED) ----------
-    history.append({
-        "confidence_champion": champion
-    })
+    if existing_index is not None:
+        history[existing_index]["confidence_champion"] = champion
+    else:
+        history.append({
+            "confidence_champion": champion
+        })
     _save_history(history)
 
     return champion
