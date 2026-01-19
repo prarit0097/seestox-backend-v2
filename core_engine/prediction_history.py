@@ -1,11 +1,11 @@
 # core_engine/prediction_history.py
-# PHASE-3A+ — PREDICTION HISTORY WITH AUTO vs USER SPLIT (STABLE)
+# PHASE-3A+ - PREDICTION HISTORY WITH AUTO vs USER SPLIT (STABLE)
 
 import json
 import os
 import threading
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple, List
 from uuid import uuid4
 
 
@@ -16,6 +16,62 @@ from uuid import uuid4
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 HISTORY_FILE = os.path.join(BASE_DIR, "prediction_history.json")
 _HISTORY_LOCK = threading.Lock()
+_LAST_HISTORY_PATH = None
+
+
+# ==================================================
+# INTERNAL HELPERS
+# ==================================================
+
+def _history_candidates() -> List[str]:
+    candidates: List[str] = []
+
+    env_path = os.getenv("SEESTOX_PREDICTION_HISTORY_PATH")
+    if env_path:
+        candidates.append(env_path)
+
+    candidates.append(os.path.join(os.getcwd(), "prediction_history.json"))
+    candidates.append(HISTORY_FILE)
+    candidates.append(os.path.join(BASE_DIR, "prediction_history.json"))
+    candidates.append(os.path.join(BASE_DIR, "ml_engine", "prediction_history.json"))
+
+    # de-dup while preserving order
+    seen = set()
+    ordered = []
+    for c in candidates:
+        if c not in seen:
+            seen.add(c)
+            ordered.append(c)
+    return ordered
+
+
+def _select_history_file() -> Optional[str]:
+    candidates = _history_candidates()
+    for path in candidates:
+        if os.path.exists(path):
+            return path
+    return None
+
+
+def _strip_internal_fields(record: dict) -> dict:
+    cleaned = dict(record)
+    cleaned.pop("_symbol_key", None)
+    return cleaned
+
+
+def _record_identity(record: dict) -> Tuple:
+    if record.get("timestamp"):
+        return ("timestamp", record.get("timestamp"))
+    if record.get("date"):
+        return ("date", record.get("date"))
+
+    prediction = record.get("prediction", {}) if isinstance(record.get("prediction"), dict) else {}
+    return (
+        "prediction",
+        prediction.get("low"),
+        prediction.get("high"),
+        record.get("price"),
+    )
 
 
 # ==================================================
@@ -40,6 +96,96 @@ def _save_history(data):
             json.dump(data, f, indent=2)
 
 
+def load_history_any() -> Tuple[List[Dict], str, object]:
+    """
+    Loads prediction history from list or dict formats.
+    Returns: (flat_records, container_type, container_data)
+    """
+    global _LAST_HISTORY_PATH
+    history_path = _select_history_file()
+    _LAST_HISTORY_PATH = history_path
+
+    if not history_path or not os.path.exists(history_path):
+        return [], "list", []
+
+    try:
+        with _HISTORY_LOCK:
+            with open(history_path, "r") as f:
+                data = json.load(f)
+    except Exception:
+        return [], "list", []
+
+    flat_records: List[Dict] = []
+    container_type = "list" if isinstance(data, list) else "dict" if isinstance(data, dict) else "list"
+
+    if isinstance(data, list):
+        flat_records = [r for r in data if isinstance(r, dict)]
+    elif isinstance(data, dict):
+        for symbol_key, records in data.items():
+            if not isinstance(records, list):
+                continue
+            for record in records:
+                if not isinstance(record, dict):
+                    continue
+                if not record.get("symbol"):
+                    record["_symbol_key"] = symbol_key
+                flat_records.append(record)
+
+    evaluated_true = sum(
+        1 for r in flat_records
+        if isinstance(r, dict) and r.get("evaluated") is True
+    )
+    return flat_records, container_type, data
+
+
+def save_history_any(flat_records: List[Dict], container_type: str, container_data) -> None:
+    """
+    Saves prediction history back into original list/dict format.
+    """
+    history_path = _LAST_HISTORY_PATH or _select_history_file() or HISTORY_FILE
+
+    if container_type == "list":
+        cleaned = [_strip_internal_fields(r) for r in flat_records if isinstance(r, dict)]
+        with _HISTORY_LOCK:
+            with open(history_path, "w") as f:
+                json.dump(cleaned, f, indent=2)
+        return
+
+    if not isinstance(container_data, dict):
+        return
+
+    # dict format: update records in-place by matching identity within symbol list
+    for record in flat_records:
+        if not isinstance(record, dict):
+            continue
+        symbol_key = record.get("_symbol_key") or record.get("symbol")
+        if not symbol_key or symbol_key not in container_data:
+            continue
+        records_list = container_data.get(symbol_key)
+        if not isinstance(records_list, list):
+            continue
+        identity = _record_identity(record)
+        cleaned = _strip_internal_fields(record)
+
+        updated = False
+        for idx, existing in enumerate(records_list):
+            if not isinstance(existing, dict):
+                continue
+            if _record_identity(existing) == identity:
+                existing.update(cleaned)
+                records_list[idx] = existing
+                updated = True
+                break
+
+        if not updated:
+            # Avoid creating new keys; append within existing symbol list only
+            records_list.append(cleaned)
+
+    with _HISTORY_LOCK:
+        with open(history_path, "w") as f:
+            json.dump(container_data, f, indent=2)
+
+
 # ==================================================
 # BACKWARD COMPATIBLE WRITE API
 # ==================================================
@@ -59,7 +205,7 @@ def store_prediction(
     tomorrow = prediction.get("tomorrow", {})
 
     # ----------------------------------
-    # ✅ EXPECTED RANGE SAFETY FIX
+    # EXPECTED RANGE SAFETY FIX
     # ----------------------------------
     expected_range = tomorrow.get("expected_range")
 
@@ -70,7 +216,7 @@ def store_prediction(
             expected_range = None
 
     record = {
-        # 🔹 NEW (mandatory for ML tracking)
+        # NEW (mandatory for ML tracking)
         "id": str(uuid4()),
 
         "symbol": symbol,
@@ -88,7 +234,7 @@ def store_prediction(
         "result": None,
         "actual_close": None,
 
-        # 🔹 NEW (range ML support)
+        # NEW (range ML support)
         "range_error": None,
         "evaluated_on": None,
 
@@ -104,16 +250,16 @@ def store_prediction(
 
 
 # ==================================================
-# READ API — AUTO vs USER AWARE
+# READ API - AUTO vs USER AWARE
 # ==================================================
 
 def get_stats_for_symbol(symbol: str, mode: Optional[str] = None) -> Dict:
     """
     Returns historical stats for a symbol.
     mode:
-      - None  → ALL
-      - USER  → user driven predictions
-      - AUTO  → system predictions
+      - None  -> ALL
+      - USER  -> user driven predictions
+      - AUTO  -> system predictions
     """
 
     history = _load_history()
@@ -202,7 +348,7 @@ def get_confidence_trend(symbol: str, window: int = 7) -> dict:
 
 
 # ==================================================
-# 🔹 RANGE ERROR TRACKER SUPPORT (NEW)
+# RANGE ERROR TRACKER SUPPORT (NEW)
 # ==================================================
 
 def load_pending_predictions():

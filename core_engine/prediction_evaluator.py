@@ -1,20 +1,19 @@
 # core_engine/prediction_evaluator.py
-# PHASE-3 — T+1 PREDICTION EVALUATION ENGINE (STABLE)
+# PHASE-3 - T+1 PREDICTION EVALUATION ENGINE (STABLE)
 
 import json
 import logging
-import os
 from pathlib import Path
 from datetime import datetime, timedelta
-import yfinance as yf
+
+from core_engine.data_fetch import fetch_stock_data
+from core_engine.prediction_history import load_history_any, save_history_any
 
 
 # ==================================================
 # CONFIG
 # ==================================================
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-HISTORY_FILE = os.path.join(BASE_DIR, "prediction_history.json")
 REPORT_PATH = (
     Path(__file__).resolve().parents[2] / "backend" / "logs" / "prediction_evaluator_report.jsonl"
 )
@@ -44,53 +43,101 @@ def run_prediction_evaluator():
 
 
 # ==================================================
-# STORAGE UTILITIES
-# ==================================================
-
-def _load_history():
-    if not os.path.exists(HISTORY_FILE):
-        return []
-
-    try:
-        with open(HISTORY_FILE, "r") as f:
-            return json.load(f)
-    except Exception:
-        return []
-
-
-def _save_history(data):
-    with open(HISTORY_FILE, "w") as f:
-        json.dump(data, f, indent=2)
-
-
-# ==================================================
 # MARKET DATA
 # ==================================================
 
 def _get_next_trading_close(symbol: str, prediction_date: str):
-    """
-    Fetch next available close price after prediction date (India NSE)
-    """
+    if not prediction_date:
+        return None
 
-    start = datetime.strptime(prediction_date, "%Y-%m-%d") + timedelta(days=1)
-    end = start + timedelta(days=6)
-
-    yf_symbol = f"{symbol}.NS"
     try:
-        df = yf.download(
-            yf_symbol,
-            start=start.strftime("%Y-%m-%d"),
-            end=end.strftime("%Y-%m-%d"),
-            progress=False
-        )
+        target_date = datetime.strptime(prediction_date, "%Y-%m-%d").date()
     except Exception:
-        logger.warning("Price fetch failed for %s", yf_symbol, exc_info=True)
         return None
 
-    if df.empty:
+    try:
+        df = fetch_stock_data(symbol, period="6mo")
+    except Exception:
+        logger.warning("Price fetch failed for %s", symbol, exc_info=True)
         return None
 
-    return float(df["Close"].iloc[0])
+    if df is None or df.empty:
+        return None
+
+    date_col = None
+    for candidate in ("Date", "date"):
+        if candidate in df.columns:
+            date_col = candidate
+            break
+
+    try:
+        if date_col:
+            dates = df[date_col]
+            dates = dates.dt.date if hasattr(dates, "dt") else dates
+            df = df.assign(_date=dates)
+            df = df[df["_date"] > target_date]
+            if df.empty:
+                return None
+            df = df.sort_values("_date")
+            close_val = df["Close"].iloc[0]
+        else:
+            close_val = df["Close"].iloc[-1]
+        return float(close_val.iloc[0] if hasattr(close_val, "iloc") else close_val)
+    except Exception:
+        return None
+
+
+def _parse_prediction_date(record: dict) -> str | None:
+    date_val = record.get("date")
+    if isinstance(date_val, str) and len(date_val) >= 10:
+        return date_val[:10]
+
+    ts = record.get("timestamp")
+    if isinstance(ts, str) and len(ts) >= 10:
+        return ts[:10]
+
+    return None
+
+
+def _resolve_expected_range(record: dict) -> dict | None:
+    expected = record.get("expected_range")
+    if isinstance(expected, dict) and expected.get("low") is not None and expected.get("high") is not None:
+        return expected
+
+    prediction = record.get("prediction")
+    if isinstance(prediction, dict) and prediction.get("low") is not None and prediction.get("high") is not None:
+        return prediction
+
+    nested = None
+    if isinstance(prediction, dict):
+        nested = prediction.get("expected_range")
+    if isinstance(nested, dict) and nested.get("low") is not None and nested.get("high") is not None:
+        return nested
+
+    return None
+
+
+def _ensure_context(record: dict) -> dict:
+    context = record.get("context", {})
+    if not isinstance(context, dict):
+        context = {}
+
+    if context.get("price") is None and record.get("price") is not None:
+        context["price"] = record.get("price")
+    if context.get("atr") is None and record.get("atr") is not None:
+        context["atr"] = record.get("atr")
+    if context.get("trend") is None and record.get("trend") is not None:
+        context["trend"] = record.get("trend")
+    if context.get("sentiment") is None and record.get("sentiment") is not None:
+        context["sentiment"] = record.get("sentiment")
+    if context.get("risk") is None and record.get("risk") is not None:
+        context["risk"] = record.get("risk")
+    if context.get("risk_score") is None and record.get("risk_score") is not None:
+        context["risk_score"] = record.get("risk_score")
+    if context.get("volatility_regime") is None and record.get("volatility_regime") is not None:
+        context["volatility_regime"] = record.get("volatility_regime")
+
+    return context
 
 
 # ==================================================
@@ -103,74 +150,98 @@ def evaluate_predictions():
     Safely ignores broken / legacy records.
     """
 
-    history = _load_history()
-    evaluated_count = 0
-    updated = False
+    history, container_type, container_data = load_history_any()
+    evaluated_now = 0
+    skipped = 0
+    errors = {}
 
     for record in history:
+        try:
+            if not isinstance(record, dict):
+                skipped += 1
+                continue
 
-        # -----------------------------
-        # SKIP ALREADY EVALUATED
-        # -----------------------------
-        if record.get("evaluated") is True:
-            continue
+            if record.get("evaluated") is True:
+                continue
 
-        symbol = record.get("symbol")
-        prediction_date = record.get("date")
-        expected_range = record.get("expected_range")
+            expected_range = _resolve_expected_range(record)
+            if not isinstance(expected_range, dict):
+                skipped += 1
+                continue
 
-        # -----------------------------
-        # HARD SAFETY CHECKS
-        # -----------------------------
-        if not symbol or not prediction_date:
-            continue
+            low = expected_range.get("low")
+            high = expected_range.get("high")
+            if low is None or high is None:
+                skipped += 1
+                continue
 
-        # -----------------------------
-        # AUTO-FILTER BROKEN RECORDS
-        # -----------------------------
-        if not isinstance(expected_range, dict):
-            continue
+            symbol = record.get("symbol") or record.get("_symbol_key")
+            prediction_date = _parse_prediction_date(record)
+            if not symbol:
+                skipped += 1
+                continue
 
-        low = expected_range.get("low")
-        high = expected_range.get("high")
+            actual_close = record.get("actual_close")
+            if actual_close is None:
+                actual_close = record.get("close")
+            if actual_close is None:
+                actual_close = record.get("actual")
+            if actual_close is None:
+                actual_close = _get_next_trading_close(symbol, prediction_date)
+            if actual_close is None:
+                skipped += 1
+                continue
 
-        if low is None or high is None:
-            continue
+            try:
+                low_val = float(low)
+                high_val = float(high)
+                actual_close_val = float(actual_close)
+            except Exception:
+                skipped += 1
+                continue
 
-        # -----------------------------
-        # FETCH ACTUAL CLOSE (T+1)
-        # -----------------------------
-        actual_close = _get_next_trading_close(symbol, prediction_date)
+            if low_val <= actual_close_val <= high_val:
+                result = "INSIDE_RANGE"
+                range_error = 0.0
+            elif actual_close_val > high_val:
+                result = "ABOVE_RANGE"
+                range_error = abs(actual_close_val - high_val)
+            else:
+                result = "BELOW_RANGE"
+                range_error = abs(actual_close_val - low_val)
 
-        if actual_close is None:
-            result = "NEUTRAL"
-        elif low <= actual_close <= high:
-            result = "SUCCESS"
-        else:
-            result = "FAILURE"
+            record["expected_range"] = {
+                "low": low_val,
+                "high": high_val,
+            }
+            record["actual_close"] = round(actual_close_val, 2)
+            record["range_error"] = round(range_error, 2)
+            record["evaluated"] = True
+            record["evaluated_on"] = datetime.now().isoformat()
+            record["result"] = result
 
-        # -----------------------------
-        # UPDATE RECORD
-        # -----------------------------
-        record.update({
-            "actual_close": round(actual_close, 2) if actual_close else None,
-            "result": result,
-            "evaluated": True,
-            "evaluated_on": datetime.now().strftime("%Y-%m-%d")
-        })
+            if record.get("outcome") != result:
+                record["outcome"] = result
 
-        evaluated_count += 1
-        updated = True
+            context = _ensure_context(record)
+            record["context"] = context
 
-    if updated:
-        _save_history(history)
+            evaluated_now += 1
+
+        except Exception as exc:
+            key = record.get("symbol") or record.get("_symbol_key") or "UNKNOWN"
+            errors[key] = str(exc)
+            skipped += 1
+
+    save_history_any(history, container_type, container_data)
 
     return {
-        "evaluated_records": evaluated_count,
-        "total_records": len(history)
+        "status": "OK",
+        "total": len(history),
+        "evaluated_now": evaluated_now,
+        "skipped": skipped,
+        "errors": errors,
     }
-
-
 
 
 def _persist_report(report: dict) -> None:
@@ -180,6 +251,8 @@ def _persist_report(report: dict) -> None:
             handle.write(json.dumps(report, ensure_ascii=True) + "\n")
     except Exception:
         logger.warning("Failed to persist evaluation report", exc_info=True)
+
+
 # ==================================================
 # MANUAL RUN SUPPORT
 # ==================================================
