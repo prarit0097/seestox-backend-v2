@@ -1,14 +1,15 @@
 # core_engine/ml_engine/expected_range/champion_selector.py
-# ER-5.1 — CHAMPION MODEL SELECTION (PHASE-1)
+# ER-5.1 - CHAMPION MODEL SELECTION (PHASE-1)
 
 import os
 import json
 import logging
-from datetime import datetime
-from typing import Dict
+from datetime import datetime, timedelta
+from typing import Dict, Tuple
 
 from core_engine.ml_engine.range_error_aggregator import aggregate_range_errors
 from core_engine.ml_engine.expected_range.model_registry import get_all_models
+from core_engine.prediction_history import load_history_any
 
 logger = logging.getLogger("core_engine.ml_engine.expected_range.champion_selector")
 
@@ -20,6 +21,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CHAMPION_FILE = os.path.join(BASE_DIR, "champion.json")
 
 MIN_SAMPLES = 20  # minimum samples required
+MIN_SAMPLES_FOR_CHAMPION = 50
+CHAMPION_LOCK_DAYS = 7
 
 
 # ==================================================
@@ -44,6 +47,60 @@ def _calculate_score(stats: dict) -> float:
     )
 
     return round(score, 4)
+
+
+def _compute_hit_rate() -> Tuple[float, int, int]:
+    history, _, _ = load_history_any()
+    evaluated_total = 0
+    inside_range = 0
+
+    for record in history:
+        if not isinstance(record, dict):
+            continue
+
+        expected = record.get("expected_range")
+        actual_close = record.get("actual_close")
+        if not isinstance(expected, dict):
+            continue
+        if expected.get("low") is None or expected.get("high") is None:
+            continue
+        if actual_close is None:
+            continue
+
+        try:
+            low = float(expected.get("low"))
+            high = float(expected.get("high"))
+            actual = float(actual_close)
+        except Exception:
+            continue
+
+        evaluated_total += 1
+        if low <= actual <= high:
+            inside_range += 1
+
+    hit_rate = (inside_range / evaluated_total) if evaluated_total else 0.0
+    return hit_rate, evaluated_total, inside_range
+
+
+def _read_existing_champion() -> Dict | None:
+    if not os.path.exists(CHAMPION_FILE):
+        return None
+    try:
+        with open(CHAMPION_FILE, "r") as f:
+            data = json.load(f)
+            return data if isinstance(data, dict) else None
+    except Exception:
+        return None
+
+
+def _lock_active(updated_on: str) -> bool:
+    if not updated_on:
+        return False
+    try:
+        updated_at = datetime.fromisoformat(updated_on)
+    except Exception:
+        return False
+    return datetime.now() < (updated_at + timedelta(days=CHAMPION_LOCK_DAYS))
 
 
 # ==================================================
@@ -99,23 +156,62 @@ def select_champion(scorecard: Dict) -> Dict:
             "note": "Expected range models not found",
         }
 
+    hit_rate, evaluated_total, inside_range = _compute_hit_rate()
+
+    existing = _read_existing_champion()
+    if existing and _lock_active(existing.get("updated_on")):
+        existing_mae = existing.get("mae")
+        try:
+            existing_mae = float(existing_mae)
+        except Exception:
+            existing_mae = float("inf")
+
+        improved = (
+            evaluated_total >= MIN_SAMPLES_FOR_CHAMPION
+            and best_mae <= (existing_mae * 0.9)
+        )
+        if not improved:
+            logger.info(
+                "Champion lock active; kept existing champion. evaluated_total=%s hit_rate=%.4f mae=%.4f",
+                evaluated_total,
+                hit_rate,
+                best_mae,
+            )
+            return {
+                "status": "CHAMPION_LOCKED",
+                **existing,
+            }
+
+    if evaluated_total < MIN_SAMPLES_FOR_CHAMPION and existing:
+        logger.info(
+            "Insufficient samples for champion switch. evaluated_total=%s hit_rate=%.4f mae=%.4f",
+            evaluated_total,
+            hit_rate,
+            best_mae,
+        )
+        return {
+            "status": "CHAMPION_LOCKED",
+            **existing,
+        }
+
     champion_low, champion_high = best_pair
 
     champion_data = {
         "champion_low": champion_low,
         "champion_high": champion_high,
-        "hit_rate": round(best_hit, 4),
+        "hit_rate": round(hit_rate, 4),
         "mae": round(best_mae, 4),
         "updated_on": datetime.now().isoformat(),
         "note": "GLOBAL_CHAMPION",
     }
 
     logger.info(
-        "Expected range champion selected: %s/%s (score=%.2f hit_rate=%.4f mae=%.4f)",
+        "Expected range champion selected: %s/%s (evaluated=%s inside=%s hit_rate=%.4f mae=%.4f)",
         champion_low,
         champion_high,
-        best_score,
-        best_hit,
+        evaluated_total,
+        inside_range,
+        hit_rate,
         best_mae,
     )
 

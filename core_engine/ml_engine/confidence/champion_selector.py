@@ -1,6 +1,7 @@
 # core_engine/ml_engine/confidence/champion_selector.py
-# ER-7.5 — CONFIDENCE CHAMPION SELECTION RULES (PRODUCTION SAFE)
+# ER-7.5 - CONFIDENCE CHAMPION SELECTION RULES (PRODUCTION SAFE)
 
+import logging
 from datetime import datetime, timedelta
 from core_engine.prediction_history import _load_history, _save_history
 
@@ -12,11 +13,14 @@ from core_engine.prediction_history import _load_history, _save_history
 MIN_TOTAL_SAMPLES = 30
 MIN_MODEL_SAMPLES = 20
 MIN_CHAMPION_SCORE = 55
+MIN_SAMPLES_FOR_CHAMPION = 50
 CHAMPION_LOCK_DAYS = 7
 FAILURE_KILL_SWITCH = 0.60  # 60%
 
 SUCCESS_TAGS = {"SUCCESS", "INSIDE_RANGE"}
 FAILURE_TAGS = {"FAILURE", "UPPER_BREAK", "LOWER_BREAK"}
+
+logger = logging.getLogger("core_engine.ml_engine.confidence.champion_selector")
 
 
 # ===============================
@@ -58,6 +62,16 @@ def _get_recent_failure_rate(records, window=5):
     return failures / len(recent)
 
 
+def _lock_active(updated_on: str) -> bool:
+    if not updated_on:
+        return False
+    try:
+        updated_at = datetime.fromisoformat(updated_on)
+    except Exception:
+        return False
+    return datetime.now() < (updated_at + timedelta(days=CHAMPION_LOCK_DAYS))
+
+
 # ===============================
 # LOAD CHAMPION
 # ===============================
@@ -92,19 +106,18 @@ def select_confidence_champion(symbol: str) -> dict:
             existing_index = idx
             break
 
-    if existing_champion:
-        lock_until = existing_champion.get("lock_until")
-        if lock_until:
-            try:
-                if datetime.now() < datetime.fromisoformat(lock_until):
-                    return existing_champion
-            except Exception:
-                pass
-
     records = [
         r for r in history
         if r.get("symbol") == symbol and r.get("evaluated") is True
     ]
+
+    if existing_champion and _lock_active(existing_champion.get("selected_on")):
+        if len(records) < MIN_SAMPLES_FOR_CHAMPION:
+            logger.info(
+                "Confidence champion lock active; kept existing. samples=%s",
+                len(records),
+            )
+            return existing_champion
 
     # ---------- RULE 1: MIN DATA ----------
     if len(records) < MIN_TOTAL_SAMPLES:
@@ -117,7 +130,7 @@ def select_confidence_champion(symbol: str) -> dict:
     if _get_recent_failure_rate(records) > FAILURE_KILL_SWITCH:
         return {
             "status": "DISABLED",
-            "note": "High recent failure rate – champion disabled"
+            "note": "High recent failure rate - champion disabled"
         }
 
     # ---------- AGGREGATE STATS ----------
@@ -154,6 +167,26 @@ def select_confidence_champion(symbol: str) -> dict:
             "score": score
         }
 
+    if existing_champion and _lock_active(existing_champion.get("selected_on")):
+        existing_score = existing_champion.get("score")
+        try:
+            existing_score = float(existing_score)
+        except Exception:
+            existing_score = None
+
+        improved = (
+            len(records) >= MIN_SAMPLES_FOR_CHAMPION
+            and existing_score is not None
+            and score >= (existing_score * 1.1)
+        )
+        if not improved:
+            logger.info(
+                "Confidence champion lock prevented switching. samples=%s score=%.2f",
+                len(records),
+                score,
+            )
+            return existing_champion
+
     # ---------- CHAMPION OBJECT ----------
     champion = {
         "status": "ACTIVE",
@@ -165,6 +198,16 @@ def select_confidence_champion(symbol: str) -> dict:
         "selected_on": datetime.now().isoformat(),
         "lock_until": (datetime.now() + timedelta(days=CHAMPION_LOCK_DAYS)).isoformat()
     }
+
+    logger.info(
+        "Confidence champion selected: %s samples=%s success=%s failure=%s neutral=%s score=%.2f",
+        symbol,
+        total,
+        success,
+        failure,
+        neutral,
+        score,
+    )
 
     # ---------- STORE (LOCKED) ----------
     if existing_index is not None:
