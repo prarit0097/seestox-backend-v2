@@ -1,29 +1,101 @@
-
-
-import os
 import json
 import logging
-from typing import List, Dict, Tuple
+from pathlib import Path
+from typing import Dict, List, Tuple
 
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-HISTORY_FILE = os.path.join(
-    os.path.dirname(os.path.dirname(BASE_DIR)),
-    "prediction_history.json"
-)
 
 logger = logging.getLogger("core_engine.ml_engine.expected_range.dataset_builder")
 
 
-def _load_history() -> List[Dict]:
-    if not os.path.exists(HISTORY_FILE):
-        return []
+def _find_repo_root() -> Path:
+    current = Path(__file__).resolve()
+    for parent in current.parents:
+        if (parent / "manage.py").exists():
+            return parent
+    fallback_root = current.parents[3] if len(current.parents) > 3 else current.parent
+    return fallback_root
 
-    try:
-        with open(HISTORY_FILE, "r") as f:
-            return json.load(f)
-    except Exception:
-        return []
+
+_REPO_ROOT = _find_repo_root()
+_PREFERRED_HISTORY = _REPO_ROOT / "prediction_history.json"
+_FALLBACK_HISTORY = _REPO_ROOT / "core_engine" / "prediction_history.json"
+_LEGACY_FALLBACK = _REPO_ROOT / "core_engine" / "ml_engine" / "prediction_history.json"
+_HISTORY_CANDIDATES = [
+    _PREFERRED_HISTORY,
+    _FALLBACK_HISTORY,
+    _LEGACY_FALLBACK,
+]
+
+
+def _load_history() -> List[Dict]:
+    last_error = None
+    for candidate in _HISTORY_CANDIDATES:
+        if not candidate.exists():
+            continue
+
+        try:
+            with candidate.open("r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception as exc:
+            last_error = exc
+            logger.exception("Failed to load prediction history as JSON: %s", candidate)
+            continue
+
+        records: List[Dict] = []
+        if isinstance(data, list):
+            records = data
+        elif isinstance(data, dict):
+            for value in data.values():
+                if isinstance(value, list):
+                    for item in value:
+                        if isinstance(item, dict):
+                            records.append(item)
+        else:
+            logger.warning("Prediction history file has unexpected structure: %s", candidate)
+            records = []
+
+        evaluated_true = sum(
+            1 for record in records
+            if isinstance(record, dict) and record.get("evaluated") is True
+        )
+        logger.info(
+            "Prediction history selected: path=%s records=%s evaluated_true=%s",
+            candidate,
+            len(records),
+            evaluated_true,
+        )
+
+        if records and evaluated_true > 0:
+            return records
+
+        if records and evaluated_true == 0:
+            logger.debug(
+                "Prediction history has no evaluated records: %s",
+                candidate,
+            )
+            continue
+
+    if last_error is not None:
+        logger.warning("Prediction history load failed for all candidates")
+    else:
+        logger.warning("Prediction history file missing: %s", _HISTORY_CANDIDATES)
+    return []
+
+
+def _resolve_expected_range(record: Dict) -> Dict | None:
+    expected = record.get("expected_range")
+    if isinstance(expected, dict) and expected.get("low") is not None and expected.get("high") is not None:
+        return expected
+
+    prediction = record.get("prediction")
+    if isinstance(prediction, dict):
+        if prediction.get("low") is not None and prediction.get("high") is not None:
+            return prediction
+        nested = prediction.get("expected_range")
+        if isinstance(nested, dict) and nested.get("low") is not None and nested.get("high") is not None:
+            return nested
+
+    return None
 
 
 def build_expected_range_dataset(
@@ -33,9 +105,9 @@ def build_expected_range_dataset(
     Builds dataset for Expected Range ML.
 
     Returns:
-        X       → feature matrix
-        y_low   → deviation from expected_low
-        y_high  → deviation from expected_high
+        X       ?+ feature matrix
+        y_low   ?+ deviation from expected_low
+        y_high  ?+ deviation from expected_high
     """
 
     history = _load_history()
@@ -57,6 +129,9 @@ def build_expected_range_dataset(
     actual_closes: List[float] = []
 
     for record in history:
+        if not isinstance(record, dict):
+            skip_counts["missing_expected_range"] += 1
+            continue
 
         # ---------------------------
         # FILTER CONDITIONS (STRICT)
@@ -65,17 +140,23 @@ def build_expected_range_dataset(
             skip_counts["missing_evaluated"] += 1
             continue
 
-        expected = record.get("expected_range")
-        actual_close = record.get("actual_close")
-        context = record.get("context", {})
-
+        expected = _resolve_expected_range(record)
         if not isinstance(expected, dict):
             skip_counts["missing_expected_range"] += 1
             continue
 
+        actual_close = record.get("actual_close")
+        if actual_close is None:
+            actual_close = record.get("price")
         if actual_close is None:
             skip_counts["missing_actual_close"] += 1
             continue
+
+        context = record.get("context", {})
+        if not isinstance(context, dict):
+            context = {}
+        if context.get("price") is None and record.get("price") is not None:
+            context["price"] = record.get("price")
 
         try:
             expected_low_raw = expected.get("low")
@@ -177,16 +258,6 @@ def build_expected_range_dataset(
         expected_highs.append(expected_high)
         actual_closes.append(actual_close)
 
-    if len(X) < min_records:
-        logger.debug(
-            "Expected range dataset summary: total=%s used=%s min_records=%s skipped=%s",
-            total_records,
-            len(X),
-            min_records,
-            skip_counts,
-        )
-        return [], [], [], [], [], []
-
     logger.debug(
         "Expected range dataset summary: total=%s used=%s min_records=%s skipped=%s",
         total_records,
@@ -194,4 +265,8 @@ def build_expected_range_dataset(
         min_records,
         skip_counts,
     )
+
+    if len(X) < min_records:
+        return [], [], [], [], [], []
+
     return X, y_low, y_high, expected_lows, expected_highs, actual_closes
