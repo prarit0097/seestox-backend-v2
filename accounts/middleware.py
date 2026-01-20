@@ -1,6 +1,7 @@
 from django.shortcuts import redirect
 from django.http import JsonResponse
 from accounts.models import UserSubscription
+import logging
 
 
 # 🔒 Pages which MUST be blocked after trial expiry
@@ -102,3 +103,34 @@ class TrialPaidAccessMiddleware:
 
         # Trial active → allow
         return self.get_response(request)
+
+class GoogleOAuthExceptionLoggingMiddleware:
+    """
+    Log exceptions for Google OAuth web flow endpoints without leaking secrets.
+    """
+
+    _PATH_PREFIXES = (
+        "/accounts/google/login/",
+        "/accounts/google/login/callback/",
+    )
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+        self.logger = logging.getLogger("django.request")
+
+    def __call__(self, request):
+        try:
+            return self.get_response(request)
+        except Exception:
+            path = request.path or ""
+            if path.startswith(self._PATH_PREFIXES):
+                self.logger.exception(
+                    "Google OAuth web flow error",
+                    extra={
+                        "path": path,
+                        "method": request.method,
+                        "host": request.get_host(),
+                    },
+                )
+            raise
+

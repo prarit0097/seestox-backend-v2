@@ -34,6 +34,16 @@ ALLOWED_HOSTS = [
     if h.strip()
 ]
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://api.seestox.com",
+    "https://seestox.com",
+    "https://www.seestox.com",
+]
+
+# Proxy/HTTPS handling (required for correct OAuth redirect URLs behind Nginx)
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
+
 # --------------------------------------------------
 # THIRD PARTY KEYS
 # --------------------------------------------------
@@ -82,6 +92,9 @@ INSTALLED_APPS = [
 
 SITE_ID = 1
 
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
 # --------------------------------------------------
 # MIDDLEWARE
 # --------------------------------------------------
@@ -94,6 +107,7 @@ MIDDLEWARE = [
     # Auth
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    "accounts.middleware.GoogleOAuthExceptionLoggingMiddleware",
 
     # Business logic
     "accounts.middleware.TrialPaidAccessMiddleware",
