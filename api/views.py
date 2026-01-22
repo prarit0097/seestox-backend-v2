@@ -522,7 +522,6 @@ def trial_expired(request):
 def terms(request):
     return render(request, "terms/terms.html")
 
-@login_required
 def privacypolicy(request):
     return render(request, "privacypolicy/privacypolicy.html")
 
