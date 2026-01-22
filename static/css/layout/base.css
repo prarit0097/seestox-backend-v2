@@ -33,8 +33,12 @@ body {
     gap: 10px;
 }
 
-.brand-icon {
-    font-size: 20px;
+.brand-logo {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    object-fit: cover;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.35);
 }
 
 .brand-text {
