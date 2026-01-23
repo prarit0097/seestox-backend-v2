@@ -57,6 +57,8 @@ urlpatterns = [
     path("trial_expired/", views.trial_expired, name="trial_expired"),
     path("terms/", views.terms, name="terms"),
     path("privacypolicy/", views.privacypolicy, name="privacypolicy"),
+    path("delete-account", views.delete_account_request, name="delete_account_request_noslash"),
+    path("delete-account/", views.delete_account_request, name="delete_account_request"),
 
     # ✅ INDEX PAGE
     path("stock-detail/", views.stock_detail_page, name="stock_detail"),

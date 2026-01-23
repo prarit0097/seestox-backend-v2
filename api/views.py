@@ -525,6 +525,10 @@ def terms(request):
 def privacypolicy(request):
     return render(request, "privacypolicy/privacypolicy.html")
 
+
+def delete_account_request(request):
+    return render(request, "delete_account/delete_account.html")
+
 @login_required
 def watchlist_page(request):
     items = Watchlist.objects.filter(user=request.user)
