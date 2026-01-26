@@ -51,18 +51,19 @@ _PEERS_MAP_CACHE = None
 _PEER_UNIVERSE_CACHE = None
 _TICKER_INFO_CACHE = {}
 _TICKER_INFO_MAX = 200
-_HISTORY_PRICE_CACHE = {"ts": 0.0, "data": {}}
+_HISTORY_PRICE_CACHE = {"ts": 0.0, "prices": {}, "changes": {}}
 _HISTORY_PRICE_TTL = 60
 
 
 def _history_price_map():
     now_ts = time.time()
-    cached = _HISTORY_PRICE_CACHE.get("data") or {}
-    if cached and now_ts - _HISTORY_PRICE_CACHE.get("ts", 0.0) < _HISTORY_PRICE_TTL:
-        return cached
+    cached_prices = _HISTORY_PRICE_CACHE.get("prices") or {}
+    cached_changes = _HISTORY_PRICE_CACHE.get("changes") or {}
+    if cached_prices and now_ts - _HISTORY_PRICE_CACHE.get("ts", 0.0) < _HISTORY_PRICE_TTL:
+        return cached_prices, cached_changes
 
     records, _, _ = load_history_any()
-    latest = {}
+    per_symbol = {}
     for record in records:
         if not isinstance(record, dict):
             continue
@@ -79,9 +80,6 @@ def _history_price_map():
                 price = float(price)
         except Exception:
             price = None
-        if price is None:
-            continue
-
         ts_val = None
         created_on = record.get("created_on")
         if isinstance(created_on, str):
@@ -90,14 +88,28 @@ def _history_price_map():
             date_val = record.get("date")
             if isinstance(date_val, str) and len(date_val) >= 10:
                 ts_val = _to_epoch(date_val[:10] + "T00:00:00Z")
-        existing = latest.get(symbol)
-        if existing is None or (ts_val is not None and ts_val > existing[0]):
-            latest[symbol] = (ts_val or 0, price)
+        if price is None:
+            continue
+        per_symbol.setdefault(symbol, []).append((ts_val or 0, price))
 
-    data = {sym: price for sym, (_, price) in latest.items()}
+    prices = {}
+    changes = {}
+    for symbol, entries in per_symbol.items():
+        entries.sort(key=lambda item: item[0], reverse=True)
+        latest_price = entries[0][1]
+        prices[symbol] = latest_price
+        if len(entries) > 1:
+            prev_price = entries[1][1]
+            if prev_price:
+                try:
+                    changes[symbol] = round(((latest_price - prev_price) / prev_price) * 100, 2)
+                except Exception:
+                    pass
+
     _HISTORY_PRICE_CACHE["ts"] = now_ts
-    _HISTORY_PRICE_CACHE["data"] = data
-    return data
+    _HISTORY_PRICE_CACHE["prices"] = prices
+    _HISTORY_PRICE_CACHE["changes"] = changes
+    return prices, changes
 
 
 def _config_path(filename: str) -> str:
@@ -420,7 +432,7 @@ def watchlist_price_data(request):
 def quotes_api(request):
     symbols = request.GET.get("symbols", "")
     symbols = [s.strip().upper() for s in symbols.split(",") if s.strip()]
-    history_map = _history_price_map()
+    history_prices, history_changes = _history_price_map()
     data = []
     for symbol in symbols:
         resolved = _SYMBOL_ALIASES.get(symbol, symbol)
@@ -428,7 +440,9 @@ def quotes_api(request):
         current_price = get_price(resolved)
         change_pct = get_change_percent(resolved)
         if current_price is None:
-            current_price = history_map.get(resolved) or history_map.get(symbol)
+            current_price = history_prices.get(resolved) or history_prices.get(symbol)
+        if change_pct is None:
+            change_pct = history_changes.get(resolved) or history_changes.get(symbol)
         data.append({
             "symbol": symbol,
             "current_price": current_price,
