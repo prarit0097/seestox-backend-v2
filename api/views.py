@@ -762,7 +762,18 @@ def ml_jobs(request):
         expected_range = None
         exact_match_pct = None
         exact_match_note = None
+        current_price = None
         if isinstance(record, dict):
+            context = record.get("context") if isinstance(record.get("context"), dict) else {}
+            if context:
+                current_price = context.get("price")
+            if current_price is None:
+                current_price = record.get("price") or record.get("close")
+            try:
+                if current_price is not None:
+                    current_price = float(current_price)
+            except Exception:
+                current_price = None
             expected = record.get("expected_range")
             if isinstance(expected, dict) and expected.get("low") is not None and expected.get("high") is not None:
                 try:
@@ -781,6 +792,7 @@ def ml_jobs(request):
         top100_rows.append({
             "symbol": symbol,
             "company": company_map.get(symbol, symbol),
+            "current_price": current_price,
             "prediction_range": expected_range,
             "exact_match_pct": exact_match_pct,
             "exact_match_note": exact_match_note,

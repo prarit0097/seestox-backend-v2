@@ -138,7 +138,13 @@
                             <span class="company">{{ row.company|title }}</span>
                             <span class="symbol">{{ row.symbol }}</span>
                         </div>
-                        <div class="price-cell" data-price="{{ row.symbol }}">--</div>
+                        <div class="price-cell" data-price="{{ row.symbol }}">
+                            {% if row.current_price is not None %}
+                                Rs {{ row.current_price|floatformat:2 }}
+                            {% else %}
+                                --
+                            {% endif %}
+                        </div>
                         <div>{% if row.prediction_range %}{{ row.prediction_range }}{% else %}-{% endif %}</div>
                         <div>
                             {% if row.exact_match_pct is not None %}
