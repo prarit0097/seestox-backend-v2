@@ -327,11 +327,13 @@ def get_stats_for_symbol(symbol: str, mode: Optional[str] = None) -> Dict:
 # ==================================================
 
 def get_confidence_trend(symbol: str, window: int = 7) -> dict:
-    history = _load_history()
+    history, _, _ = load_history_any()
 
     records = [
         r for r in history
-        if r.get("symbol") == symbol and r.get("evaluated") is True
+        if isinstance(r, dict)
+        and r.get("symbol") == symbol
+        and r.get("evaluated") is True
     ]
 
     if len(records) < window * 2:
@@ -367,10 +369,11 @@ def load_pending_predictions():
     - have expected_range
     - are not evaluated yet
     """
-    history = _load_history()
+    history, _, _ = load_history_any()
     return [
         h for h in history
-        if h.get("evaluated") is not True
+        if isinstance(h, dict)
+        and h.get("evaluated") is not True
         and isinstance(h.get("expected_range"), dict)
         and h["expected_range"].get("low") is not None
         and h["expected_range"].get("high") is not None
@@ -384,9 +387,11 @@ def update_prediction_result(
     error: float,
     evaluated_on: str,
 ):
-    history = _load_history()
+    history, container_type, container_data = load_history_any()
 
     for record in history:
+        if not isinstance(record, dict):
+            continue
         if record.get("id") == prediction_id:
             record["actual_close"] = actual_close
             record["result"] = result
@@ -395,4 +400,4 @@ def update_prediction_result(
             record["evaluated_on"] = evaluated_on
             break
 
-    _save_history(history)
+    save_history_any(history, container_type, container_data)
