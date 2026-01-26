@@ -466,11 +466,19 @@ def _format_compact(value):
 
 
 def _intraday_chart(symbol: str):
-    try:
-        ticker = yf.Ticker(f"{symbol}.NS")
-        data = ticker.history(period="1d", interval="5m")
+    ticker = yf.Ticker(f"{symbol}.NS")
+    candidates = [
+        ("1d", "5m", "%H:%M"),
+        ("5d", "15m", "%d %b %H:%M"),
+        ("1mo", "1d", "%d %b"),
+    ]
+    for period, interval, label_fmt in candidates:
+        try:
+            data = ticker.history(period=period, interval=interval)
+        except Exception:
+            data = None
         if data is None or data.empty:
-            return [], None, None, None
+            continue
         points = []
         for index, row in data.iterrows():
             try:
@@ -480,16 +488,16 @@ def _intraday_chart(symbol: str):
             if price == 0 or not math.isfinite(price):
                 continue
             points.append({
-                "t": index.strftime("%H:%M"),
+                "t": index.strftime(label_fmt),
                 "p": round(price, 2),
             })
         if not points:
-            return [], None, None, None
-        low = float(data["Low"].min())
-        high = float(data["High"].max())
-        if not math.isfinite(low):
+            continue
+        low = float(data["Low"].min()) if "Low" in data else None
+        high = float(data["High"].max()) if "High" in data else None
+        if low is not None and not math.isfinite(low):
             low = None
-        if not math.isfinite(high):
+        if high is not None and not math.isfinite(high):
             high = None
         first = points[0]["p"]
         last = points[-1]["p"]
@@ -498,9 +506,10 @@ def _intraday_chart(symbol: str):
             value = ((last - first) / first) * 100
             if math.isfinite(value):
                 day_return = round(value, 2)
-        return points, round(low, 2), round(high, 2), day_return
-    except Exception:
-        return [], None, None, None
+        low_out = round(low, 2) if low is not None else None
+        high_out = round(high, 2) if high is not None else None
+        return points, low_out, high_out, day_return
+    return [], None, None, None
 
 
 def _build_financials(info: dict):
