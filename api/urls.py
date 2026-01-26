@@ -21,6 +21,7 @@ urlpatterns = [
     path("onboarding/", views.onboarding, name="onboarding"),
     path("dashboard/", views.dashboard, name="dashboard"),
     path("ml_jobs/", views.ml_jobs, name="ml_jobs"),
+    path("health/", views.health, name="health"),
 
     path("analyze-stock/", views.analyze_stock_view),
     path("search-suggestions/", SearchSuggestionsAPI.as_view()),

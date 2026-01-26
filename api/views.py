@@ -11,6 +11,7 @@ import json
 from datetime import datetime, timedelta, date
 import razorpay
 import yfinance as yf
+import threading
 from core_engine.symbol_resolver import resolve_symbol
 from core_engine.symbol_resolver import DF as SYMBOL_DF
 from core_engine.llm_chat_engine import explain_with_llm
@@ -32,8 +33,6 @@ import os
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-MARKET_SNAPSHOT_TTL = int(os.getenv("MARKET_SNAPSHOT_TTL", "5"))
-_MARKET_SNAPSHOT_CACHE = {"ts": 0.0, "data": None}
 PLAN_AMOUNTS = {
     "MONTHLY": 29900,
     "YEARLY": 300000,
@@ -128,18 +127,27 @@ def dashboard(request):
 
 
 # =========================================================
+# HEALTH
+# =========================================================
+def health(request):
+    return JsonResponse({
+        "status": "ok",
+        "ts": timezone.now().isoformat(),
+    })
+
+
+# =========================================================
 # MARKET SNAPSHOT
 # =========================================================
 
-def market_snapshot_api(request):
-    now_ts = time.time()
-    if (
-        _MARKET_SNAPSHOT_CACHE["data"] is not None
-        and now_ts - _MARKET_SNAPSHOT_CACHE["ts"] < MARKET_SNAPSHOT_TTL
-    ):
-        return JsonResponse(_MARKET_SNAPSHOT_CACHE["data"])
+MARKET_SNAPSHOT_TTL = int(os.getenv("MARKET_SNAPSHOT_TTL", "5"))
+_MARKET_SNAPSHOT_CACHE = {"ts": 0.0, "data": None}
+_MARKET_SNAPSHOT_LOCK = threading.Lock()
+_MARKET_SNAPSHOT_REFRESHING = False
 
-    try:
+
+def market_snapshot_api(request):
+    def _fetch_snapshot():
         nifty = yf.Ticker("^NSEI")
         sensex = yf.Ticker("^BSESN")
         vix = yf.Ticker("^INDIAVIX")
@@ -159,7 +167,7 @@ def market_snapshot_api(request):
             else:
                 is_open = False
 
-        data = {
+        return {
             "nifty": round(nifty.info.get("regularMarketChangePercent", 0), 2),
             "sensex": round(sensex.info.get("regularMarketChangePercent", 0), 2),
             "vix": round(vix.info.get("regularMarketChangePercent", 0), 2),
@@ -171,20 +179,54 @@ def market_snapshot_api(request):
             "status": "OK",
             "is_open": is_open,
         }
-        _MARKET_SNAPSHOT_CACHE["data"] = data
-        _MARKET_SNAPSHOT_CACHE["ts"] = now_ts
-    except Exception as e:
-        print("❌ Market snapshot error:", e)
-        if _MARKET_SNAPSHOT_CACHE["data"] is not None:
-            data = dict(_MARKET_SNAPSHOT_CACHE["data"])
+
+    def _background_refresh(now_ts):
+        global _MARKET_SNAPSHOT_REFRESHING
+        try:
+            data = _fetch_snapshot()
+            with _MARKET_SNAPSHOT_LOCK:
+                _MARKET_SNAPSHOT_CACHE["data"] = data
+                _MARKET_SNAPSHOT_CACHE["ts"] = now_ts
+        except Exception as e:
+            print("? Market snapshot error:", e)
+        finally:
+            with _MARKET_SNAPSHOT_LOCK:
+                _MARKET_SNAPSHOT_REFRESHING = False
+
+    now_ts = time.time()
+    with _MARKET_SNAPSHOT_LOCK:
+        cached = _MARKET_SNAPSHOT_CACHE["data"]
+        age = now_ts - _MARKET_SNAPSHOT_CACHE["ts"] if cached else None
+        refreshing = _MARKET_SNAPSHOT_REFRESHING
+
+    if cached is not None and age is not None and age < MARKET_SNAPSHOT_TTL:
+        return JsonResponse(cached)
+
+    if not refreshing:
+        with _MARKET_SNAPSHOT_LOCK:
+            _MARKET_SNAPSHOT_REFRESHING = True
+        threading.Thread(target=_background_refresh, args=(now_ts,), daemon=True).start()
+
+    if cached is not None:
+        data = dict(cached)
+        if data.get("status") == "OK":
             data["status"] = "STALE"
-        else:
-            data = {"nifty": 0, "sensex": 0, "vix": 0, "status": "ERROR"}
+        return JsonResponse(data)
 
-    return JsonResponse(data)
+    return JsonResponse({
+        "nifty": 0,
+        "sensex": 0,
+        "vix": 0,
+        "banknifty": 0,
+        "nifty_price": 0,
+        "sensex_price": 0,
+        "vix_price": 0,
+        "banknifty_price": 0,
+        "status": "WARMING",
+        "is_open": None,
+    })
 
 
-# =========================================================
 # ANALYZE STOCK
 # =========================================================z
 @login_required

@@ -10,6 +10,7 @@ from urllib.parse import quote_plus
 NEWS_CACHE = {}
 CACHE_TTL = 60  # 60 seconds
 _CACHE_LOCK = threading.Lock()
+_REFRESHING = set()
 
 def _to_iso_utc(entry):
     published = entry.get("published_parsed")
@@ -53,12 +54,16 @@ def _fetch_google_news(query="MARKET"):
 
 
 def _background_refresh(query):
-    data = _fetch_google_news(query)
-    with _CACHE_LOCK:
-        NEWS_CACHE[query] = {
-            "time": time.time(),
-            "data": data
-        }
+    try:
+        data = _fetch_google_news(query)
+        with _CACHE_LOCK:
+            NEWS_CACHE[query] = {
+                "time": time.time(),
+                "data": data
+            }
+    finally:
+        with _CACHE_LOCK:
+            _REFRESHING.discard(query)
 
 
 def get_market_news(query="MARKET", force_refresh=False):
@@ -66,36 +71,45 @@ def get_market_news(query="MARKET", force_refresh=False):
     now = time.time()
 
     if force_refresh:
-        data = _fetch_google_news(query)
         with _CACHE_LOCK:
-            NEWS_CACHE[query] = {
-                "time": time.time(),
-                "data": data
-            }
-        return data
+            cached = NEWS_CACHE.get(query)
+            refreshing = query in _REFRESHING
+            if not refreshing:
+                _REFRESHING.add(query)
+                threading.Thread(
+                    target=_background_refresh,
+                    args=(query,),
+                    daemon=True,
+                ).start()
+        return cached["data"] if cached else []
 
-    # ✅ If cache fresh → instant
+    # If cache fresh -> instant
     with _CACHE_LOCK:
         if query in NEWS_CACHE:
             cached = NEWS_CACHE[query]
             if now - cached["time"] < CACHE_TTL:
                 return cached["data"]
 
-    # 🔥 Cache stale / missing → return OLD if exists
+    # Cache stale / missing -> return OLD if exists
     with _CACHE_LOCK:
         if query in NEWS_CACHE:
+            if query not in _REFRESHING:
+                _REFRESHING.add(query)
+                threading.Thread(
+                    target=_background_refresh,
+                    args=(query,),
+                    daemon=True,
+                ).start()
+            return NEWS_CACHE[query]["data"]
+
+    # First time only -> fetch async + empty fallback
+    with _CACHE_LOCK:
+        if query not in _REFRESHING:
+            _REFRESHING.add(query)
             threading.Thread(
                 target=_background_refresh,
                 args=(query,),
-                daemon=True
+                daemon=True,
             ).start()
-            return NEWS_CACHE[query]["data"]
-
-    # 🔥 First time only → fetch async + empty fallback
-    threading.Thread(
-        target=_background_refresh,
-        args=(query,),
-        daemon=True
-    ).start()
 
     return []
