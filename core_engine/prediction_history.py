@@ -53,6 +53,13 @@ def _select_history_file() -> Optional[str]:
     return None
 
 
+def _resolve_history_path() -> str:
+    selected = _select_history_file()
+    if selected:
+        return selected
+    return os.path.join(os.getcwd(), "prediction_history.json")
+
+
 def _strip_internal_fields(record: dict) -> dict:
     cleaned = dict(record)
     cleaned.pop("_symbol_key", None)
@@ -80,11 +87,12 @@ def _record_identity(record: dict) -> Tuple:
 
 def _load_history():
     with _HISTORY_LOCK:
-        if not os.path.exists(HISTORY_FILE):
+        history_path = _resolve_history_path()
+        if not os.path.exists(history_path):
             return []
 
         try:
-            with open(HISTORY_FILE, "r") as f:
+            with open(history_path, "r") as f:
                 return json.load(f)
         except Exception:
             return []
@@ -92,7 +100,8 @@ def _load_history():
 
 def _save_history(data):
     with _HISTORY_LOCK:
-        with open(HISTORY_FILE, "w") as f:
+        history_path = _resolve_history_path()
+        with open(history_path, "w") as f:
             json.dump(data, f, indent=2)
 
 
