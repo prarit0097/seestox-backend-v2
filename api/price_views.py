@@ -374,21 +374,9 @@ def quotes_api(request):
     data = []
     for symbol in symbols:
         resolved = _SYMBOL_ALIASES.get(symbol, symbol)
-        register_symbol(resolved)
+        register_symbol(resolved, eager=False)
         current_price = get_price(resolved)
         change_pct = get_change_percent(resolved)
-        if current_price is None or change_pct is None:
-            try:
-                quote = yf.Ticker(f"{resolved}.NS")
-                info = quote.fast_info or {}
-                if current_price is None:
-                    current_price = info.get("last_price")
-                if change_pct is None:
-                    change_pct = info.get("last_change_pct")
-                    if change_pct is not None:
-                        change_pct = round(float(change_pct) * 100, 2)
-            except Exception:
-                pass
         data.append({
             "symbol": symbol,
             "current_price": current_price,

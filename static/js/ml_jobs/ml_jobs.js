@@ -56,5 +56,5 @@
     }
 
     refreshPrices();
-    setInterval(refreshPrices, 30000);
+    setInterval(refreshPrices, 10000);
 })();

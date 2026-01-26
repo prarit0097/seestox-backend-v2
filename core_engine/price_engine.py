@@ -100,17 +100,25 @@ def _price_updater():
         time.sleep(FETCH_INTERVAL)
 
 
-def register_symbol(symbol: str):
+def register_symbol(symbol: str, eager: bool = True):
     """
-    Call this ONCE when stock is added
+    Call this ONCE when stock is added.
+    eager=False avoids blocking request threads.
     """
     with LOCK:
         if symbol in PRICE_CACHE:
             return
+        # reserve slot so background updater picks it up
+        PRICE_CACHE[symbol] = None
+        CHANGE_CACHE[symbol] = None
+        LAST_FETCH[symbol] = 0.0
+
+    if not eager:
+        return
 
     price, change_pct = _fetch_quote_from_yahoo(symbol)
     with LOCK:
-        if symbol not in PRICE_CACHE:
+        if symbol in PRICE_CACHE and price is not None:
             PRICE_CACHE[symbol] = price
             CHANGE_CACHE[symbol] = change_pct
             LAST_FETCH[symbol] = time.time()
