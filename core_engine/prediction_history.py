@@ -210,7 +210,7 @@ def store_prediction(
     mode: USER | AUTO
     """
 
-    history = _load_history()
+    history, container_type, container_data = load_history_any()
     tomorrow = prediction.get("tomorrow", {})
 
     # ----------------------------------
@@ -255,7 +255,7 @@ def store_prediction(
         record["context"] = context
 
     history.append(record)
-    _save_history(history)
+    save_history_any(history, container_type, container_data)
 
 
 # ==================================================
