@@ -276,7 +276,8 @@ def get_stats_for_symbol(symbol: str, mode: Optional[str] = None) -> Dict:
     success = failure = neutral = 0
 
     for record in history:
-
+        if not isinstance(record, dict):
+            continue
         expected = record.get("expected_range")
         if not isinstance(expected, dict):
             continue
