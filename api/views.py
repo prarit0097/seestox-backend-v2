@@ -12,10 +12,13 @@ from datetime import datetime, timedelta
 import razorpay
 import yfinance as yf
 from core_engine.symbol_resolver import resolve_symbol
+from core_engine.symbol_resolver import DF as SYMBOL_DF
 from core_engine.llm_chat_engine import explain_with_llm
 from core_engine.analyzer import analyze_stock
 from core_engine.sentiment_engine import analyze_sentiment
 from core_engine.trend_engine import analyze_trend
+from core_engine.universe import TOP_100_STOCKS
+from core_engine.prediction_history import load_history_any
 from django.utils import timezone
 from api.models import Watchlist
 from accounts.models import UserSubscription
@@ -25,6 +28,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.authentication import JWTAuthentication
 import os
+from pathlib import Path
+from zoneinfo import ZoneInfo
 
 MARKET_SNAPSHOT_TTL = int(os.getenv("MARKET_SNAPSHOT_TTL", "5"))
 _MARKET_SNAPSHOT_CACHE = {"ts": 0.0, "data": None}
@@ -443,6 +448,124 @@ def profile_avatar_api(request):
 
 
 # =========================================================
+# ML JOBS HELPERS
+# =========================================================
+def _read_last_jsonl(path: Path) -> dict | None:
+    if not path.exists():
+        return None
+    try:
+        lines = path.read_bytes().splitlines()
+    except Exception:
+        return None
+    for raw in reversed(lines):
+        if not raw:
+            continue
+        try:
+            return json.loads(raw.decode("utf-8"))
+        except Exception:
+            continue
+    return None
+
+
+def _format_dt(value: str | None) -> str | None:
+    if not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(value)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
+        return dt.strftime("%d %b %Y, %I:%M %p")
+    except Exception:
+        return value
+
+
+def _parse_prediction_dt(record: dict) -> datetime | None:
+    if not isinstance(record, dict):
+        return None
+    ts = record.get("timestamp") or record.get("created_at") or record.get("evaluated_on")
+    if isinstance(ts, str):
+        try:
+            dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            return dt
+        except Exception:
+            pass
+    date_val = record.get("date")
+    if isinstance(date_val, str) and len(date_val) >= 10:
+        try:
+            dt = datetime.fromisoformat(date_val[:10])
+            return dt
+        except Exception:
+            return None
+    return None
+
+
+def _prediction_date_only(record: dict) -> datetime.date | None:
+    dt = _parse_prediction_dt(record)
+    if not dt:
+        return None
+    return dt.date()
+
+
+def _exact_match_percent(record: dict) -> float | None:
+    expected = record.get("expected_range")
+    if not isinstance(expected, dict):
+        return None
+    low = expected.get("low")
+    high = expected.get("high")
+    if low is None or high is None:
+        return None
+    try:
+        low_val = float(low)
+        high_val = float(high)
+    except Exception:
+        return None
+    if high_val <= low_val:
+        return None
+
+    actual = (
+        record.get("actual_close")
+        or record.get("close")
+        or record.get("actual")
+    )
+    try:
+        actual_val = float(actual)
+    except Exception:
+        actual_val = None
+
+    if actual_val is None:
+        return None
+
+    if low_val <= actual_val <= high_val:
+        return 100.0
+
+    range_error = record.get("range_error")
+    if range_error is None:
+        if actual_val > high_val:
+            range_error = abs(actual_val - high_val)
+        else:
+            range_error = abs(actual_val - low_val)
+    try:
+        range_error_val = float(range_error)
+    except Exception:
+        return None
+
+    width = high_val - low_val
+    pct = max(0.0, 100.0 - (range_error_val / width * 100.0))
+    return round(pct, 2)
+
+
+def _next_weekly_competition() -> str:
+    tz = ZoneInfo("Asia/Kolkata")
+    now_dt = datetime.now(tz)
+    target = now_dt.replace(hour=3, minute=0, second=0, microsecond=0)
+    days_ahead = (5 - now_dt.weekday()) % 7  # Saturday=5
+    if days_ahead == 0 and now_dt >= target:
+        days_ahead = 7
+    target = target + timedelta(days=days_ahead)
+    return target.strftime("%d %b %Y, %I:%M %p")
+
+
+# =========================================================
 # SIMPLE PAGE ROUTES
 # =========================================================
 @login_required
@@ -451,7 +574,142 @@ def ml_jobs(request):
     user_email = (request.user.email or "").strip().lower()
     if user_email != allowed_email:
         return redirect("/dashboard/")
-    return render(request, "ml_jobs/ml_jobs.html")
+
+    from core_engine.ml_engine.expected_range import model_registry
+
+    logs_dir = Path(settings.BASE_DIR) / "backend" / "logs"
+    ml_report_path = logs_dir / "ml_cycle_report.jsonl"
+    auto_report_path = logs_dir / "auto_prediction_report.jsonl"
+    evaluator_report_path = logs_dir / "prediction_evaluator_report.jsonl"
+
+    ml_report = _read_last_jsonl(ml_report_path) or {}
+    auto_report = _read_last_jsonl(auto_report_path) or {}
+    evaluator_report = _read_last_jsonl(evaluator_report_path) or {}
+
+    scorecard = {}
+    champ = {}
+    if isinstance(ml_report, dict):
+        scorecard = ml_report.get("steps", {}).get("scoring") or {}
+        champ = ml_report.get("steps", {}).get("champion") or {}
+
+    winner_pair = None
+    if isinstance(champ, dict):
+        champ_low = champ.get("champion_low")
+        if isinstance(champ_low, str) and champ_low.endswith("_low"):
+            winner_pair = champ_low.replace("_low", "")
+
+    scores = []
+    if isinstance(scorecard, dict):
+        for pair, stats in scorecard.items():
+            if not isinstance(stats, dict):
+                continue
+            scores.append({
+                "pair": pair,
+                "hit_rate": stats.get("hit_rate"),
+                "mae": stats.get("mae"),
+                "mae_low": stats.get("mae_low"),
+                "mae_high": stats.get("mae_high"),
+                "is_winner": pair == winner_pair,
+            })
+        scores.sort(key=lambda x: (x.get("hit_rate") or 0), reverse=True)
+
+    total_models = 0
+    model_meta = {}
+    try:
+        total_models = len(model_registry.get_all_models())
+        model_meta = model_registry.get_registry_meta()
+    except Exception:
+        total_models = 0
+        model_meta = {}
+
+    data_samples = model_meta.get("samples")
+
+    def _job_status(report: dict) -> str:
+        if not report:
+            return "job not done"
+        status = str(report.get("status", "")).upper()
+        return "job done" if status and status != "FAILED" else "job not done"
+
+    auto_status = _job_status(auto_report)
+    auto_time = _format_dt(auto_report.get("completed_at") or auto_report.get("started_at"))
+    evaluator_status = _job_status(evaluator_report)
+    evaluator_time = _format_dt(evaluator_report.get("completed_at") or evaluator_report.get("started_at"))
+
+    # ---- TOP 100 STOCKS PANEL ----
+    tz = ZoneInfo("Asia/Kolkata")
+    target_date = (datetime.now(tz) - timedelta(days=1)).date()
+    history, _, _ = load_history_any()
+    latest_by_symbol = {}
+    if isinstance(history, list):
+        for record in history:
+            if not isinstance(record, dict):
+                continue
+            rec_date = _prediction_date_only(record)
+            if rec_date != target_date:
+                continue
+            symbol = record.get("symbol") or record.get("_symbol_key")
+            if not symbol:
+                continue
+            symbol = str(symbol).upper().strip()
+            rec_dt = _parse_prediction_dt(record)
+            existing = latest_by_symbol.get(symbol)
+            if existing is None:
+                latest_by_symbol[symbol] = (rec_dt, record)
+            else:
+                prev_dt = existing[0]
+                if rec_dt and (prev_dt is None or rec_dt > prev_dt):
+                    latest_by_symbol[symbol] = (rec_dt, record)
+
+    company_map = {}
+    try:
+        for _, row in SYMBOL_DF.iterrows():
+            sym = str(row.get("symbol") or "").upper().strip()
+            if sym:
+                company_map[sym] = str(row.get("company") or sym).strip()
+    except Exception:
+        company_map = {}
+
+    top100_rows = []
+    for symbol in TOP_100_STOCKS:
+        record = latest_by_symbol.get(symbol, (None, None))[1]
+        expected_range = None
+        exact_match_pct = None
+        if isinstance(record, dict):
+            expected = record.get("expected_range")
+            if isinstance(expected, dict) and expected.get("low") is not None and expected.get("high") is not None:
+                try:
+                    low_val = float(expected.get("low"))
+                    high_val = float(expected.get("high"))
+                    expected_range = f"Rs {low_val:.2f} - Rs {high_val:.2f}"
+                except Exception:
+                    expected_range = None
+            exact_match_pct = _exact_match_percent(record)
+
+        top100_rows.append({
+            "symbol": symbol,
+            "company": company_map.get(symbol, symbol),
+            "prediction_range": expected_range,
+            "exact_match_pct": exact_match_pct,
+        })
+
+    context = {
+        "total_models": total_models,
+        "competition_time": _next_weekly_competition(),
+        "competition_last_run_time": _format_dt(
+            ml_report.get("completed_at") or ml_report.get("started_at")
+        ) if isinstance(ml_report, dict) else None,
+        "competition_data_count": data_samples,
+        "winner_pair": winner_pair,
+        "scores": scores,
+        "auto_time": auto_time,
+        "auto_status": auto_status,
+        "evaluator_time": evaluator_time,
+        "evaluator_status": evaluator_status,
+        "top100_rows": top100_rows,
+        "top100_symbols": ",".join(TOP_100_STOCKS),
+        "prediction_range_date": target_date.strftime("%d %b %Y"),
+    }
+    return render(request, "ml_jobs/ml_jobs.html", context)
 
 
 @login_required

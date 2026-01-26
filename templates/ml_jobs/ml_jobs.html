@@ -1,7 +1,7 @@
-{% extends "layout/base.html" %}
+ï»¿{% extends "layout/base.html" %}
 {% load static %}
 
-{% block title %}ML Jobs – AIStockTool{% endblock %}
+{% block title %}ML Jobs - AIStockTool{% endblock %}
 
 {% block css %}
 <link rel="stylesheet" href="{% static 'css/ml_jobs/ml_jobs.css' %}">
@@ -11,12 +11,132 @@
 <div class="ml-jobs-page">
     <div class="ml-jobs-header">
         <h1>ML JOBS</h1>
-        <p>Private workspace for ML job runs and internal notes.</p>
+        <p>ML pipeline status, competition results, and scheduled runs.</p>
     </div>
 
-    <div class="ml-jobs-card">
-        <h2>Status</h2>
-        <p>hello python</p>
+    <div class="ml-jobs-grid">
+        <div class="ml-jobs-card">
+            <h2>Total ML Models</h2>
+            <p class="metric">{{ total_models|default:"0" }}</p>
+        </div>
+
+        <div class="ml-jobs-card">
+            <h2>Upcoming Model Competition</h2>
+            <p class="metric">{{ competition_time|default:"-" }}</p>
+        </div>
+
+        <div class="ml-jobs-card">
+            <h2>Last Competition Run</h2>
+            <p class="metric">
+                {% if competition_last_run_time %}{{ competition_last_run_time }}{% else %}-{% endif %}
+            </p>
+        </div>
+
+        <div class="ml-jobs-card">
+            <h2>Competition Data Count</h2>
+            <p class="metric">
+                {% if competition_data_count %}{{ competition_data_count }}{% else %}-{% endif %}
+            </p>
+        </div>
+
+        <div class="ml-jobs-card">
+            <h2>This Week Winner</h2>
+            <p class="metric">{% if winner_pair %}{{ winner_pair }}{% else %}-{% endif %}</p>
+        </div>
+    </div>
+
+    <div class="ml-jobs-section">
+        <h2>Competition Scores</h2>
+        <div class="ml-jobs-table">
+            <div class="ml-jobs-row ml-jobs-head">
+                <div>Model</div>
+                <div>Hit Rate</div>
+                <div>MAE</div>
+            </div>
+            {% if scores %}
+                {% for row in scores %}
+                    <div class="ml-jobs-row {% if row.is_winner %}winner{% endif %}">
+                        <div>{{ row.pair }}</div>
+                        <div>{% if row.hit_rate is not None %}{{ row.hit_rate }}{% else %}-{% endif %}</div>
+                        <div>{% if row.mae is not None %}{{ row.mae }}{% else %}-{% endif %}</div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="ml-jobs-row empty">
+                    <div>No scores available yet.</div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="ml-jobs-section">
+        <h2>Scheduled Jobs</h2>
+        <div class="ml-jobs-table">
+            <div class="ml-jobs-row ml-jobs-head">
+                <div>Job</div>
+                <div>Last Run</div>
+                <div>Status</div>
+            </div>
+            <div class="ml-jobs-row">
+                <div>run_auto_predictions</div>
+                <div>{% if auto_time %}{{ auto_time }}{% else %}-{% endif %}</div>
+                <div class="{% if auto_status == 'job done' %}status-ok{% else %}status-bad{% endif %}">
+                    {{ auto_status|default:"job not done" }}
+                </div>
+            </div>
+            <div class="ml-jobs-row">
+                <div>run_prediction_evaluator</div>
+                <div>{% if evaluator_time %}{{ evaluator_time }}{% else %}-{% endif %}</div>
+                <div class="{% if evaluator_status == 'job done' %}status-ok{% else %}status-bad{% endif %}">
+                    {{ evaluator_status|default:"job not done" }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="ml-jobs-section">
+        <h2>TOP 100 STOCKS</h2>
+        <div class="ml-jobs-subtitle">
+            Current Price (live) + Prediction Range ({{ prediction_range_date }})
+        </div>
+        <div class="ml-jobs-table ml-jobs-table-stocks">
+            <div class="ml-jobs-row ml-jobs-head ml-jobs-row-stocks">
+                <div>Stock</div>
+                <div>Current Price</div>
+                <div>Model Prediction Range</div>
+                <div>Exact Match %</div>
+            </div>
+            {% if top100_rows %}
+                {% for row in top100_rows %}
+                    <div class="ml-jobs-row ml-jobs-row-stocks" data-symbol="{{ row.symbol }}">
+                        <div class="stock-name">
+                            <span class="company">{{ row.company|title }}</span>
+                            <span class="symbol">{{ row.symbol }}</span>
+                        </div>
+                        <div class="price-cell" data-price="{{ row.symbol }}">--</div>
+                        <div>{% if row.prediction_range %}{{ row.prediction_range }}{% else %}-{% endif %}</div>
+                        <div>
+                            {% if row.exact_match_pct is not None %}
+                                {{ row.exact_match_pct }}%
+                            {% else %}
+                                -
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="ml-jobs-row empty">
+                    <div>No TOP 100 data available.</div>
+                </div>
+            {% endif %}
+        </div>
     </div>
 </div>
+{% endblock %}
+
+{% block js %}
+<script>
+    window.mlJobsSymbols = "{{ top100_symbols }}";
+</script>
+<script src="{% static 'js/ml_jobs/ml_jobs.js' %}"></script>
 {% endblock %}
