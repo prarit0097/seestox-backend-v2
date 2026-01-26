@@ -487,9 +487,17 @@ def _intraday_chart(symbol: str):
                 continue
             if price == 0 or not math.isfinite(price):
                 continue
+            ts_val = None
+            try:
+                ts_val = int(index.timestamp())
+            except Exception:
+                ts_val = None
             points.append({
                 "t": index.strftime(label_fmt),
                 "p": round(price, 2),
+                "time": index.strftime(label_fmt),
+                "price": round(price, 2),
+                "ts": ts_val,
             })
         if not points:
             continue
@@ -1551,6 +1559,14 @@ def stock_detail_api(request):
     if current_price is None:
         current_price = analysis.get("current_price")
 
+    chart_times = [point.get("t") for point in chart_points] if chart_points else []
+    chart_prices = [point.get("p") for point in chart_points] if chart_points else []
+    chart_points_xy = [
+        [point.get("ts"), point.get("p")]
+        for point in chart_points
+        if point.get("ts") is not None
+    ]
+
     return Response({
         "symbol": symbol,
         "company": company.title() if company else symbol,
@@ -1583,6 +1599,10 @@ def stock_detail_api(request):
         "shareholding_mode": shareholding_mode,
         "shareholding_note": shareholding_note,
         "chart": chart_points,
+        "chart_times": chart_times,
+        "chart_prices": chart_prices,
+        "chart_points": chart_points_xy,
+        "chart_available": bool(chart_points),
         "today_low": day_low,
         "today_high": day_high,
         "today_return": day_return,
