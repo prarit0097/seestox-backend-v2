@@ -5,6 +5,31 @@
 
 {% block css %}
 <link rel="stylesheet" href="{% static 'css/ml_jobs/ml_jobs.css' %}">
+<style>
+    /* Fallback styles in case static CSS isn't served yet */
+    .ml-jobs-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-bottom: 32px; }
+    .ml-jobs-card { background: rgba(15, 23, 42, 0.65); border-radius: 16px; padding: 24px; border: 1px solid rgba(255,255,255,0.04); }
+    .ml-jobs-card .metric { font-size: 22px; font-weight: 700; color: #e2e8f0; }
+    .ml-jobs-section { margin-top: 28px; }
+    .ml-jobs-section h2 { font-size: 22px; margin-bottom: 12px; }
+    .ml-jobs-subtitle { color: #94a3b8; font-size: 13px; margin-bottom: 12px; }
+    .ml-jobs-table { border-radius: 14px; overflow: hidden; border: 1px solid rgba(255,255,255,0.06); background: rgba(15, 23, 42, 0.45); }
+    .ml-jobs-row { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.06); color: #cbd5e1; font-size: 14px; }
+    .ml-jobs-row-stocks { grid-template-columns: 2.2fr 1fr 2fr 1fr; }
+    .ml-jobs-head { background: rgba(15, 23, 42, 0.8); font-weight: 700; color: #e2e8f0; }
+    .ml-jobs-row.winner { background: rgba(34, 197, 94, 0.12); color: #d1fae5; font-weight: 700; }
+    .ml-jobs-row.empty { grid-template-columns: 1fr; color: #94a3b8; }
+    .stock-name { display: flex; flex-direction: column; gap: 4px; }
+    .stock-name .company { font-weight: 600; color: #e2e8f0; }
+    .stock-name .symbol { font-size: 12px; color: #94a3b8; letter-spacing: 0.5px; }
+    .price-cell { font-weight: 700; color: #38bdf8; }
+    .status-ok { color: #22c55e; font-weight: 700; }
+    .status-bad { color: #ef4444; font-weight: 700; }
+    @media (max-width: 768px) {
+        .ml-jobs-grid { grid-template-columns: 1fr; }
+        .ml-jobs-row { grid-template-columns: 1fr; }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
