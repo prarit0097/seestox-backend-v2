@@ -143,6 +143,8 @@
                         <div>
                             {% if row.exact_match_pct is not None %}
                                 {{ row.exact_match_pct }}%
+                            {% elif row.exact_match_note %}
+                                {{ row.exact_match_note }}
                             {% else %}
                                 -
                             {% endif %}

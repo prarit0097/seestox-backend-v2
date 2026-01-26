@@ -640,25 +640,27 @@ def ml_jobs(request):
     target_date = (datetime.now(tz) - timedelta(days=1)).date()
     history, _, _ = load_history_any()
     latest_by_symbol = {}
+    latest_dates = []
     if isinstance(history, list):
         for record in history:
             if not isinstance(record, dict):
-                continue
-            rec_date = _prediction_date_only(record)
-            if rec_date != target_date:
                 continue
             symbol = record.get("symbol") or record.get("_symbol_key")
             if not symbol:
                 continue
             symbol = str(symbol).upper().strip()
             rec_dt = _parse_prediction_dt(record)
+            rec_date = rec_dt.date() if rec_dt else _prediction_date_only(record)
             existing = latest_by_symbol.get(symbol)
             if existing is None:
-                latest_by_symbol[symbol] = (rec_dt, record)
+                latest_by_symbol[symbol] = (rec_dt, record, rec_date)
             else:
                 prev_dt = existing[0]
                 if rec_dt and (prev_dt is None or rec_dt > prev_dt):
-                    latest_by_symbol[symbol] = (rec_dt, record)
+                    latest_by_symbol[symbol] = (rec_dt, record, rec_date)
+        for _, _, rec_date in latest_by_symbol.values():
+            if rec_date:
+                latest_dates.append(rec_date)
 
     company_map = {}
     try:
@@ -671,9 +673,10 @@ def ml_jobs(request):
 
     top100_rows = []
     for symbol in TOP_100_STOCKS:
-        record = latest_by_symbol.get(symbol, (None, None))[1]
+        record = latest_by_symbol.get(symbol, (None, None, None))[1]
         expected_range = None
         exact_match_pct = None
+        exact_match_note = None
         if isinstance(record, dict):
             expected = record.get("expected_range")
             if isinstance(expected, dict) and expected.get("low") is not None and expected.get("high") is not None:
@@ -684,13 +687,25 @@ def ml_jobs(request):
                 except Exception:
                     expected_range = None
             exact_match_pct = _exact_match_percent(record)
+            if exact_match_pct is None:
+                if record.get("evaluated") is True or record.get("actual_close") is not None:
+                    exact_match_note = None
+                else:
+                    exact_match_note = "pending"
 
         top100_rows.append({
             "symbol": symbol,
             "company": company_map.get(symbol, symbol),
             "prediction_range": expected_range,
             "exact_match_pct": exact_match_pct,
+            "exact_match_note": exact_match_note,
         })
+
+    if latest_dates:
+        latest_dates.sort()
+        prediction_range_date = latest_dates[-1].strftime("%d %b %Y")
+    else:
+        prediction_range_date = target_date.strftime("%d %b %Y")
 
     context = {
         "total_models": total_models,
@@ -707,7 +722,7 @@ def ml_jobs(request):
         "evaluator_status": evaluator_status,
         "top100_rows": top100_rows,
         "top100_symbols": ",".join(TOP_100_STOCKS),
-        "prediction_range_date": target_date.strftime("%d %b %Y"),
+        "prediction_range_date": prediction_range_date,
     }
     return render(request, "ml_jobs/ml_jobs.html", context)
 
