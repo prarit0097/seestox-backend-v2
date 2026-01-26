@@ -3,7 +3,7 @@
 
 import logging
 from datetime import datetime, timedelta
-from core_engine.prediction_history import _load_history, _save_history
+from core_engine.prediction_history import load_history_any, save_history_any
 
 
 # ===============================
@@ -77,11 +77,13 @@ def _lock_active(updated_on: str) -> bool:
 # ===============================
 
 def load_confidence_champion(symbol: str) -> dict:
-    history = _load_history()
+    history, _, _ = load_history_any()
 
     for r in reversed(history):
+        if not isinstance(r, dict):
+            continue
         champ = r.get("confidence_champion")
-        if champ and champ.get("symbol") == symbol:
+        if isinstance(champ, dict) and champ.get("symbol") == symbol:
             return champ
 
     return {
@@ -95,20 +97,25 @@ def load_confidence_champion(symbol: str) -> dict:
 # ===============================
 
 def select_confidence_champion(symbol: str) -> dict:
-    history = _load_history()
+    history, container_type, container_data = load_history_any()
 
     existing_champion = None
     existing_index = None
     for idx in range(len(history) - 1, -1, -1):
-        champ = history[idx].get("confidence_champion")
-        if champ and champ.get("symbol") == symbol:
+        record = history[idx]
+        if not isinstance(record, dict):
+            continue
+        champ = record.get("confidence_champion")
+        if isinstance(champ, dict) and champ.get("symbol") == symbol:
             existing_champion = champ
             existing_index = idx
             break
 
     records = [
         r for r in history
-        if r.get("symbol") == symbol and r.get("evaluated") is True
+        if isinstance(r, dict)
+        and r.get("symbol") == symbol
+        and r.get("evaluated") is True
     ]
 
     if existing_champion and _lock_active(existing_champion.get("selected_on")):
@@ -214,8 +221,9 @@ def select_confidence_champion(symbol: str) -> dict:
         history[existing_index]["confidence_champion"] = champion
     else:
         history.append({
-            "confidence_champion": champion
+            "symbol": symbol,
+            "confidence_champion": champion,
         })
-    _save_history(history)
+    save_history_any(history, container_type, container_data)
 
     return champion
