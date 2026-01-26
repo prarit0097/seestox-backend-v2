@@ -22,6 +22,8 @@ def aggregate_range_errors(symbol: str | None = None):
     })
 
     for record in history:
+        if not isinstance(record, dict):
+            continue
         if record.get("evaluated") is not True:
             continue
 
