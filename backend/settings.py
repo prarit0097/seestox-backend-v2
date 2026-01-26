@@ -100,6 +100,7 @@ USE_X_FORWARDED_HOST = True
 # --------------------------------------------------
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "backend.middleware.SlowRequestLoggingMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -266,6 +267,8 @@ DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "seestox@gmail.com")
 LOG_DIR = BASE_DIR / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
+REQUEST_SLOW_MS = int(os.getenv("REQUEST_SLOW_MS", "800"))
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -291,6 +294,11 @@ LOGGING = {
         "django": {
             "handlers": ["console", "file"],
             "level": "INFO",
+            "propagate": False,
+        },
+        "perf.request": {
+            "handlers": ["console", "file"],
+            "level": "WARNING",
             "propagate": False,
         },
         "core_engine": {
