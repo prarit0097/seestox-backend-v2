@@ -483,7 +483,12 @@ def _format_dt(value: str | None) -> str | None:
 def _parse_prediction_dt(record: dict) -> datetime | None:
     if not isinstance(record, dict):
         return None
-    ts = record.get("timestamp") or record.get("created_at") or record.get("evaluated_on")
+    ts = (
+        record.get("timestamp")
+        or record.get("created_at")
+        or record.get("created_on")
+        or record.get("evaluated_on")
+    )
     if isinstance(ts, str):
         try:
             dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
@@ -556,49 +561,53 @@ def _exact_match_percent(record: dict) -> float | None:
 
 
 def _load_history_latest() -> list[dict]:
-    candidates = []
+    candidates: list[str] = []
     try:
         candidates = prediction_history._history_candidates()
     except Exception:
         candidates = []
 
-    latest_path = None
-    latest_mtime = None
+    flat_records: list[dict] = []
+    seen_ids: set[str] = set()
+
+    def _append_record(record: dict) -> None:
+        if not isinstance(record, dict):
+            return
+        record_id = record.get("id") or record.get("uuid")
+        if record_id and record_id in seen_ids:
+            return
+        if record_id:
+            seen_ids.add(str(record_id))
+        flat_records.append(record)
+
     for path in candidates:
+        if not path or not os.path.exists(path):
+            continue
         try:
-            if not path or not os.path.exists(path):
-                continue
-            mtime = os.path.getmtime(path)
-            if latest_mtime is None or mtime > latest_mtime:
-                latest_mtime = mtime
-                latest_path = path
+            with open(path, "r") as handle:
+                data = json.load(handle)
         except Exception:
             continue
 
-    if not latest_path:
-        history, _, _ = load_history_any()
-        return history if isinstance(history, list) else []
+        if isinstance(data, list):
+            for record in data:
+                _append_record(record)
+            continue
 
-    try:
-        with open(latest_path, "r") as handle:
-            data = json.load(handle)
-    except Exception:
-        history, _, _ = load_history_any()
-        return history if isinstance(history, list) else []
-
-    flat_records: list[dict] = []
-    if isinstance(data, list):
-        flat_records = [r for r in data if isinstance(r, dict)]
-    elif isinstance(data, dict):
-        for symbol_key, records in data.items():
-            if not isinstance(records, list):
-                continue
-            for record in records:
-                if not isinstance(record, dict):
+        if isinstance(data, dict):
+            for symbol_key, records in data.items():
+                if not isinstance(records, list):
                     continue
-                if not record.get("symbol"):
-                    record["_symbol_key"] = symbol_key
-                flat_records.append(record)
+                for record in records:
+                    if not isinstance(record, dict):
+                        continue
+                    if not record.get("symbol"):
+                        record["_symbol_key"] = symbol_key
+                    _append_record(record)
+
+    if not flat_records:
+        history, _, _ = load_history_any()
+        return history if isinstance(history, list) else []
 
     return flat_records
 
@@ -689,7 +698,9 @@ def ml_jobs(request):
     target_date = (datetime.now(tz) - timedelta(days=1)).date()
     history = _load_history_latest()
     latest_by_symbol = {}
+    latest_range_by_symbol = {}
     latest_dates = []
+    latest_range_dates = []
     if isinstance(history, list):
         for record in history:
             if not isinstance(record, dict):
@@ -700,6 +711,16 @@ def ml_jobs(request):
             symbol = str(symbol).upper().strip()
             rec_dt = _parse_prediction_dt(record)
             rec_date = rec_dt.date() if rec_dt else _prediction_date_only(record)
+            if rec_dt is None and rec_date:
+                rec_dt = datetime.combine(rec_date, datetime.min.time())
+
+            expected = record.get("expected_range") if isinstance(record, dict) else None
+            has_range = (
+                isinstance(expected, dict)
+                and expected.get("low") is not None
+                and expected.get("high") is not None
+            )
+
             existing = latest_by_symbol.get(symbol)
             if existing is None:
                 latest_by_symbol[symbol] = (rec_dt, record, rec_date)
@@ -707,9 +728,22 @@ def ml_jobs(request):
                 prev_dt = existing[0]
                 if rec_dt and (prev_dt is None or rec_dt > prev_dt):
                     latest_by_symbol[symbol] = (rec_dt, record, rec_date)
+
+            if has_range:
+                existing_range = latest_range_by_symbol.get(symbol)
+                if existing_range is None:
+                    latest_range_by_symbol[symbol] = (rec_dt, record, rec_date)
+                else:
+                    prev_dt = existing_range[0]
+                    if rec_dt and (prev_dt is None or rec_dt > prev_dt):
+                        latest_range_by_symbol[symbol] = (rec_dt, record, rec_date)
+
         for _, _, rec_date in latest_by_symbol.values():
             if rec_date:
                 latest_dates.append(rec_date)
+        for _, _, rec_date in latest_range_by_symbol.values():
+            if rec_date:
+                latest_range_dates.append(rec_date)
 
     company_map = {}
     try:
@@ -722,7 +756,9 @@ def ml_jobs(request):
 
     top100_rows = []
     for symbol in TOP_100_STOCKS:
-        record = latest_by_symbol.get(symbol, (None, None, None))[1]
+        record = latest_range_by_symbol.get(symbol, (None, None, None))[1]
+        if record is None:
+            record = latest_by_symbol.get(symbol, (None, None, None))[1]
         expected_range = None
         exact_match_pct = None
         exact_match_note = None
@@ -750,7 +786,10 @@ def ml_jobs(request):
             "exact_match_note": exact_match_note,
         })
 
-    if latest_dates:
+    if latest_range_dates:
+        latest_range_dates.sort()
+        prediction_range_date = latest_range_dates[-1].strftime("%d %b %Y")
+    elif latest_dates:
         latest_dates.sort()
         prediction_range_date = latest_dates[-1].strftime("%d %b %Y")
     else:
