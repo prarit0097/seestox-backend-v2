@@ -1,0 +1,50 @@
+.ml-jobs-page {
+    max-width: 1100px;
+    margin: auto;
+    padding: 32px;
+}
+
+.ml-jobs-header {
+    max-width: 760px;
+    margin-bottom: 32px;
+}
+
+.ml-jobs-header h1 {
+    font-size: 36px;
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+.ml-jobs-header p {
+    color: #9bb3c7;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+.ml-jobs-card {
+    background: rgba(15, 23, 42, 0.65);
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid rgba(255,255,255,0.04);
+}
+
+.ml-jobs-card h2 {
+    font-size: 20px;
+    margin-bottom: 12px;
+}
+
+.ml-jobs-card p {
+    color: #a8bfd1;
+    font-size: 15px;
+    line-height: 1.7;
+}
+
+@media (max-width: 768px) {
+    .ml-jobs-page {
+        padding: 20px;
+    }
+
+    .ml-jobs-header h1 {
+        font-size: 28px;
+    }
+}

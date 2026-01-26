@@ -89,6 +89,12 @@
             <a href="/privacypolicy/" class="{% if request.path == '/privacypolicy/' %}active{% endif %}">
                 Privacy Policy / Help
             </a>
+
+            {% if request.user.is_authenticated and request.user.email|lower == "1995praritsidana@gmail.com" %}
+                <a href="/ml_jobs/" class="{% if request.path == '/ml_jobs/' %}active{% endif %}">
+                    ML JOBS
+                </a>
+            {% endif %}
             
 
         </nav>

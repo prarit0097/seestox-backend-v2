@@ -446,6 +446,15 @@ def profile_avatar_api(request):
 # SIMPLE PAGE ROUTES
 # =========================================================
 @login_required
+def ml_jobs(request):
+    allowed_email = "1995praritsidana@gmail.com"
+    user_email = (request.user.email or "").strip().lower()
+    if user_email != allowed_email:
+        return redirect("/dashboard/")
+    return render(request, "ml_jobs/ml_jobs.html")
+
+
+@login_required
 def stock_search(request):
     return render(request, "stock_search/stock_search.html")
 
