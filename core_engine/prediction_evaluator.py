@@ -15,7 +15,7 @@ from core_engine.prediction_history import load_history_any, save_history_any
 # ==================================================
 
 REPORT_PATH = (
-    Path(__file__).resolve().parents[2] / "backend" / "logs" / "prediction_evaluator_report.jsonl"
+    Path(__file__).resolve().parents[1] / "backend" / "logs" / "prediction_evaluator_report.jsonl"
 )
 logger = logging.getLogger("core_engine.prediction_evaluator")
 

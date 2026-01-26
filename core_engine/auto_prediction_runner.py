@@ -7,7 +7,7 @@ from pathlib import Path
 
 logger = logging.getLogger("core_engine.auto_prediction_runner")
 REPORT_PATH = (
-    Path(__file__).resolve().parents[2] / "backend" / "logs" / "auto_prediction_report.jsonl"
+    Path(__file__).resolve().parents[1] / "backend" / "logs" / "auto_prediction_report.jsonl"
 )
 
 

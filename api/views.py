@@ -19,6 +19,7 @@ from core_engine.sentiment_engine import analyze_sentiment
 from core_engine.trend_engine import analyze_trend
 from core_engine.universe import TOP_100_STOCKS
 from core_engine.prediction_history import load_history_any
+from core_engine import prediction_history as prediction_history
 from django.utils import timezone
 from api.models import Watchlist
 from accounts.models import UserSubscription
@@ -554,6 +555,54 @@ def _exact_match_percent(record: dict) -> float | None:
     return round(pct, 2)
 
 
+def _load_history_latest() -> list[dict]:
+    candidates = []
+    try:
+        candidates = prediction_history._history_candidates()
+    except Exception:
+        candidates = []
+
+    latest_path = None
+    latest_mtime = None
+    for path in candidates:
+        try:
+            if not path or not os.path.exists(path):
+                continue
+            mtime = os.path.getmtime(path)
+            if latest_mtime is None or mtime > latest_mtime:
+                latest_mtime = mtime
+                latest_path = path
+        except Exception:
+            continue
+
+    if not latest_path:
+        history, _, _ = load_history_any()
+        return history if isinstance(history, list) else []
+
+    try:
+        with open(latest_path, "r") as handle:
+            data = json.load(handle)
+    except Exception:
+        history, _, _ = load_history_any()
+        return history if isinstance(history, list) else []
+
+    flat_records: list[dict] = []
+    if isinstance(data, list):
+        flat_records = [r for r in data if isinstance(r, dict)]
+    elif isinstance(data, dict):
+        for symbol_key, records in data.items():
+            if not isinstance(records, list):
+                continue
+            for record in records:
+                if not isinstance(record, dict):
+                    continue
+                if not record.get("symbol"):
+                    record["_symbol_key"] = symbol_key
+                flat_records.append(record)
+
+    return flat_records
+
+
 def _next_weekly_competition() -> str:
     tz = ZoneInfo("Asia/Kolkata")
     now_dt = datetime.now(tz)
@@ -638,7 +687,7 @@ def ml_jobs(request):
     # ---- TOP 100 STOCKS PANEL ----
     tz = ZoneInfo("Asia/Kolkata")
     target_date = (datetime.now(tz) - timedelta(days=1)).date()
-    history, _, _ = load_history_any()
+    history = _load_history_latest()
     latest_by_symbol = {}
     latest_dates = []
     if isinstance(history, list):
