@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_GET
 import yfinance as yf
 from datetime import datetime, timezone
+import time
 import math
 import json
 import os
@@ -22,6 +23,7 @@ from core_engine.price_engine import (
     register_symbol,
 )
 from core_engine.symbol_resolver import resolve_symbol, DF
+from core_engine.prediction_history import load_history_any
 from core_engine.news_fetcher import get_market_news
 
 _SYMBOL_ALIASES = {
@@ -49,6 +51,53 @@ _PEERS_MAP_CACHE = None
 _PEER_UNIVERSE_CACHE = None
 _TICKER_INFO_CACHE = {}
 _TICKER_INFO_MAX = 200
+_HISTORY_PRICE_CACHE = {"ts": 0.0, "data": {}}
+_HISTORY_PRICE_TTL = 60
+
+
+def _history_price_map():
+    now_ts = time.time()
+    cached = _HISTORY_PRICE_CACHE.get("data") or {}
+    if cached and now_ts - _HISTORY_PRICE_CACHE.get("ts", 0.0) < _HISTORY_PRICE_TTL:
+        return cached
+
+    records, _, _ = load_history_any()
+    latest = {}
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        symbol = record.get("symbol") or record.get("_symbol_key")
+        if not symbol:
+            continue
+        symbol = str(symbol).upper().strip()
+        context = record.get("context") if isinstance(record.get("context"), dict) else {}
+        price = context.get("price")
+        if price is None:
+            price = record.get("price") or record.get("close")
+        try:
+            if price is not None:
+                price = float(price)
+        except Exception:
+            price = None
+        if price is None:
+            continue
+
+        ts_val = None
+        created_on = record.get("created_on")
+        if isinstance(created_on, str):
+            ts_val = _to_epoch(created_on)
+        if ts_val is None:
+            date_val = record.get("date")
+            if isinstance(date_val, str) and len(date_val) >= 10:
+                ts_val = _to_epoch(date_val[:10] + "T00:00:00Z")
+        existing = latest.get(symbol)
+        if existing is None or (ts_val is not None and ts_val > existing[0]):
+            latest[symbol] = (ts_val or 0, price)
+
+    data = {sym: price for sym, (_, price) in latest.items()}
+    _HISTORY_PRICE_CACHE["ts"] = now_ts
+    _HISTORY_PRICE_CACHE["data"] = data
+    return data
 
 
 def _config_path(filename: str) -> str:
@@ -371,12 +420,15 @@ def watchlist_price_data(request):
 def quotes_api(request):
     symbols = request.GET.get("symbols", "")
     symbols = [s.strip().upper() for s in symbols.split(",") if s.strip()]
+    history_map = _history_price_map()
     data = []
     for symbol in symbols:
         resolved = _SYMBOL_ALIASES.get(symbol, symbol)
         register_symbol(resolved, eager=False)
         current_price = get_price(resolved)
         change_pct = get_change_percent(resolved)
+        if current_price is None:
+            current_price = history_map.get(resolved) or history_map.get(symbol)
         data.append({
             "symbol": symbol,
             "current_price": current_price,
