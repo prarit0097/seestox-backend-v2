@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils.timezone import now
 import time
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import razorpay
 import yfinance as yf
 from core_engine.symbol_resolver import resolve_symbol
@@ -499,7 +499,7 @@ def _parse_prediction_dt(record: dict) -> datetime | None:
     return None
 
 
-def _prediction_date_only(record: dict) -> datetime.date | None:
+def _prediction_date_only(record: dict) -> date | None:
     dt = _parse_prediction_dt(record)
     if not dt:
         return None
