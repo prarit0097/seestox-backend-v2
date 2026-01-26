@@ -44,7 +44,7 @@ def start_scheduler():
 
     scheduler.add_job(
         run_prediction_evaluator,
-        CronTrigger(hour=15, minute=45),
+        CronTrigger(day_of_week="mon-fri", hour=15, minute=40),
         id="prediction_evaluator",
         **common
     )
